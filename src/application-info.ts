@@ -58,10 +58,6 @@ export class ApplicationInfo {
     this.initializedCard = true;
   }
 
-  isInitializedCard() : boolean {
-    return this.initializedCard;
-  }
-
   hasMasterKey() : boolean {
     return this.keyUID.length != 0;
   }

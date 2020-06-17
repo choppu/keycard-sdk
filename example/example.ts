@@ -25,8 +25,25 @@ function createChannel(): any {
           try {
             let channel = new Keycard.PCSCCardChannel(reader, protocol);
             let cmdSet = new Keycard.Commandset(channel);
-            await cmdSet.select();
-            console.log(cmdSet.applicationInfo);
+            console.log("Selecting card");
+            (await cmdSet.select()).checkOK();
+
+            if (cmdSet.applicationInfo.initializedCard == false) {
+              (await cmdSet.init("123456", "123456123456", "KeycardTest")).checkOK();
+              (await cmdSet.select()).checkOK();
+            }
+            
+            console.log("Pairing");
+            await cmdSet.autoPair("KeycardTest");
+            
+            console.log("Open secure channel");
+            await cmdSet.autoOpenSecureChannel();
+            
+            console.log("Verify PIN");
+            (await cmdSet.verifyPIN("123456")).checkAuthOK();
+           
+            console.log("Unpair");
+            await cmdSet.autoUnpair();
           } catch(err) {
             console.log(err);
           }

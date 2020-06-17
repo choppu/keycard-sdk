@@ -41,7 +41,7 @@ export class SecureChannel {
   generateSecret(keyData: Uint8Array) : void {
     let privKey = CryptoUtils.generateECPrivateKey();
     this.publicKey = secp256k1.publicKeyCreate(privKey, false);
-    this.secret = secp256k1.ecdh(keyData, privKey);
+    this.secret = secp256k1.ecdh(keyData, privKey, {hashfn: (x, _) => x}, new Uint8Array(32));
   }
 
   setPairing(pairing: Pairing) : void {
@@ -49,13 +49,12 @@ export class SecureChannel {
   }
 
   processOpenSecureChannelResponse(response: APDUResponse) : void {
-    let data = new Uint8Array(SC_SECRET_LENGTH);
+    let data = response.data;
 
     let hashBytes = CryptoJS.algo.SHA512.create();
     hashBytes.update(CryptoJS.lib.WordArray.create(this.secret));
     hashBytes.update(CryptoJS.lib.WordArray.create(this.pairing.pairingKey))
-    data.set(response.data.slice(0, SC_SECRET_LENGTH));
-    hashBytes.update(CryptoJS.lib.WordArray.create(data));
+    hashBytes.update(CryptoJS.lib.WordArray.create(data.subarray(0, SC_SECRET_LENGTH)));
     let keyData = CryptoUtils.wordArrayToByteArray(hashBytes.finalize());
 
     this.iv = data.subarray(SC_SECRET_LENGTH, data.byteLength);
@@ -66,23 +65,30 @@ export class SecureChannel {
 
   encryptAPDU(data: Uint8Array) : Uint8Array {
     let dataWArray = CryptoJS.lib.WordArray.create(data);
-    let encData = CryptoJS.AES.encrypt(dataWArray, this.sessionEncKey, {iv: this.iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Iso97971});
-    return CryptoUtils.wordArrayToByteArray(encData);
+    let sessionEncKeyWArray = CryptoJS.lib.WordArray.create(this.sessionEncKey);
+    let ivWArray = CryptoJS.lib.WordArray.create(this.iv);
+    let encData = CryptoJS.AES.encrypt(dataWArray, sessionEncKeyWArray, {iv: ivWArray, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Iso97971});
+    return CryptoUtils.wordArrayToByteArray(encData.ciphertext);
   }
 
   decryptAPDU(data: Uint8Array) : Uint8Array {
     let dataWArray = CryptoJS.lib.WordArray.create(data);
-    let decData = CryptoJS.AES.decrypt(dataWArray, this.sessionEncKey, {iv: this.iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Iso97971});
+    let sessionEncKeyWArray = CryptoJS.lib.WordArray.create(this.sessionEncKey);
+    let ivWArray = CryptoJS.lib.WordArray.create(this.iv);
+    let decData = CryptoJS.AES.decrypt({ciphertext: dataWArray}, sessionEncKeyWArray, {iv: ivWArray, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Iso97971});
     return CryptoUtils.wordArrayToByteArray(decData);
   }
 
   updateIV(meta: Uint8Array, data: Uint8Array) : void {
     let key = CryptoJS.lib.WordArray.create(this.sessionMacKey);
-    let cmac = CryptoJS.algo.CMAC.create(key);
-    cmac.update(CryptoJS.lib.WordArray.create(meta));
-    cmac.update(CryptoJS.lib.WordArray.create(data));
-
-    this.iv = CryptoUtils.wordArrayToByteArray(cmac.finalize());
+    let iv = CryptoJS.lib.WordArray.create(new Uint8Array(16));
+    let mess = new Uint8Array(meta.byteLength + data.byteLength);
+    mess.set(meta, 0);
+    mess.set(data, meta.byteLength);
+    let messWArray = CryptoJS.lib.WordArray.create(mess);
+    let encData = CryptoJS.AES.encrypt(messWArray, key, {iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.NoPadding});
+    let temp = CryptoUtils.wordArrayToByteArray(encData.ciphertext);
+    this.iv = temp.subarray(temp.byteLength - 16);
   }
 
   protectedCommand(cla: number, ins: number, p1: number, p2: number, data: Uint8Array) : APDUCommand {
@@ -91,7 +97,7 @@ export class SecureChannel {
     if (this.open) {
       data = this.encryptAPDU(data);
       let meta = new Uint8Array(metaLength);
-      meta.set([cla, ins, p1, p2, (data.byteLength + SC_BLOCK_SIZE)])
+      meta.set([cla, ins, p1, p2, (data.byteLength + SC_BLOCK_SIZE)]);
       this.updateIV(meta, data);
 
       finalData = new Uint8Array(this.iv.byteLength + data.byteLength);
@@ -115,12 +121,10 @@ export class SecureChannel {
       let data = resp.data;
       let meta = new Uint8Array(metaLength);
       meta[0] = data.byteLength;
-      let mac = new Uint8Array(this.iv.byteLength);
-      mac.set(data.slice(0, this.iv.length), 0);
+      let mac = data.subarray(0, this.iv.byteLength);
       data = data.subarray(this.iv.byteLength, data.byteLength);
 
       let plainData = this.decryptAPDU(data);
-
       this.updateIV(meta, data);
 
       if (!CryptoUtils.Uint8ArrayEqual(this.iv, mac)) {
@@ -174,7 +178,7 @@ export class SecureChannel {
     if (!CryptoUtils.Uint8ArrayEqual(checkCryptogram, cardCryptogram)) {
       throw new APDUException("Error: Invalid card cryptogram");
     }
-
+    sha256Data.reset(); 
     sha256Data.update(CryptoJS.lib.WordArray.create(sharedSecret));
     sha256Data.update(CryptoJS.lib.WordArray.create(cardChallenge));
     checkCryptogram = CryptoUtils.wordArrayToByteArray(sha256Data.finalize());
@@ -183,6 +187,7 @@ export class SecureChannel {
     resp.checkOK("Pairing failed on step 2");
     respData = resp.data;
 
+    sha256Data.reset();
     sha256Data.update(CryptoJS.lib.WordArray.create(sharedSecret));
     sha256Data.update(CryptoJS.lib.WordArray.create(respData.subarray(1)));
     let pKey = CryptoUtils.wordArrayToByteArray(sha256Data.finalize());
@@ -224,8 +229,8 @@ export class SecureChannel {
   oneShotEncrypt(initData: Uint8Array) : Uint8Array {
     let iv = CryptoUtils.getRandomBytes(SC_BLOCK_SIZE);
     this.sessionEncKey = this.secret;
-    let encData = CryptoJS.AES.encrypt(initData, this.sessionEncKey, {iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Iso97971});
-    initData = CryptoUtils.wordArrayToByteArray(encData);
+    let encData = CryptoJS.AES.encrypt(CryptoJS.lib.WordArray.create(initData), CryptoJS.lib.WordArray.create(this.sessionEncKey), {iv: CryptoJS.lib.WordArray.create(iv), mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Iso97971});
+    initData = CryptoUtils.wordArrayToByteArray(encData.ciphertext);
      
     let encrypted = new Uint8Array(1 + this.publicKey.byteLength + iv.byteLength + initData.byteLength);
     encrypted[0] = this.publicKey.byteLength;

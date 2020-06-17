@@ -24,7 +24,7 @@ export namespace CryptoUtils {
 
   export function Uint8ArrayEqual(arr1: Uint8Array, arr2: Uint8Array) : boolean {
     return (arr1.byteLength == arr2.byteLength) && (arr1.every(function(el, i) {
-      el === arr2[i]; 
+      return el === arr2[i]; 
     }));
   }
 

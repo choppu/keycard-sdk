@@ -6,7 +6,7 @@ export class Pairing {
   pairingIndex: number;
 
   constructor(pairingKey: Uint8Array, pairingIndex: number) {
-    this.pairingKey = new Uint8Array(pairingKey);
+    this.pairingKey = pairingKey;
     this.pairingIndex = pairingIndex;
   }
 

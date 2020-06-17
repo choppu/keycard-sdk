@@ -115,8 +115,8 @@ export class Commandset {
     return resp;  
   }
 
-  autoOpenSecureChannel() : void {
-    this.secureChannel.autoOpenSecureChannel(this.apduChannel);
+  async autoOpenSecureChannel() : Promise<void> {
+    return this.secureChannel.autoOpenSecureChannel(this.apduChannel);
   }
 
   pairingPasswordToSecret(pairingPassword: string) : Uint8Array {
@@ -129,16 +129,16 @@ export class Commandset {
     return PBKDF2Bytes;
   }
 
-  autoPair(pairingData: string | Uint8Array) : void {
+  async autoPair(pairingData: string | Uint8Array) : Promise<void> {
     if (typeof pairingData === "string") {
       pairingData = this.pairingPasswordToSecret(pairingData);
     }
     
-    this.secureChannel.autoPair(this.apduChannel, pairingData);
+    return this.secureChannel.autoPair(this.apduChannel, pairingData);
   }
 
-  autoUnpair() : void {
-    this.secureChannel.autoUnpair(this.apduChannel);
+  async autoUnpair() : Promise<void> {
+    return this.secureChannel.autoUnpair(this.apduChannel);
   }
 
   async openSecureChannel(index: number, data: Uint8Array) : Promise<APDUResponse> {
@@ -157,8 +157,8 @@ export class Commandset {
     return this.secureChannel.unpair(this.apduChannel, p1);
   }
 
-  unpairOthers() : void{
-    this.secureChannel.unpairOthers(this.apduChannel);
+  async unpairOthers() : Promise<void> {
+    return this.secureChannel.unpairOthers(this.apduChannel);
   }
 
   async getStatus(info: number) : Promise<APDUResponse> {
@@ -338,7 +338,7 @@ export class Commandset {
 
     initData.set(pinByteArr, 0);
     initData.set(pukByteArr, pinByteArr.byteLength);
-    initData.set(sharedSecret, pukByteArr.byteLength);
+    initData.set(sharedSecret, pinByteArr.byteLength + pukByteArr.byteLength);
     
     let init = new APDUCommand(0x80, INS_INIT, 0, 0, this.secureChannel.oneShotEncrypt(initData));
     return this.apduChannel.send(init);
