@@ -7,29 +7,29 @@ const pcsclite = require('@pokusew/pcsclite');
 
 export class PCSCCardChannel implements CardChannel {
   cardChannel: any;
+  protocol: number;
 
-  constructor(cardChannel: any) {
+  constructor(cardChannel: any, protocol: number) {
     this.cardChannel = cardChannel;
+    this.protocol = protocol;
   }
 
-  send(cmd: APDUCommand) : APDUResponse {
+  async send(cmd: APDUCommand) : Promise<APDUResponse> {
     let apduCmd = Buffer.from(cmd.serialize());
     let apduResp;
 
-    this.sendDataAsync(apduCmd)
-    .then(function (resp) { 
-      apduResp = resp;
-     })
-    .catch(function (err) {
-        throw new CardIOError(err);
-    });
-
+    try {
+      apduResp = await this.sendDataAsync(this.cardChannel, this.protocol, apduCmd)  
+    } catch(err) {
+      throw new CardIOError(err);
+    };
+    
     return new APDUResponse(new Uint8Array(apduResp));
   }
 
-  sendDataAsync(cmd: Buffer) : Promise<any> {
+  sendDataAsync(channel: any, protocol: number, cmd: Buffer) : Promise<any> {
     return new Promise(function(resolve,reject) {
-      this.cardChannel.transmit(cmd, 32, pcsclite.SCARD_PROTOCOL_T1, function(err, resp) {
+      channel.transmit(cmd, 255, protocol, function(err, resp) {
         if (err) {
           reject(err);
         } else {

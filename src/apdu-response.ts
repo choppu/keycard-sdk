@@ -21,7 +21,7 @@ export class APDUResponse {
     this.sw1 = apdu[length - 2] & 0xff;
     this.sw2 = apdu[length - 1] & 0xff;
     this.sw = (this.sw1 << 8) | this.sw2;
-    this.data = new Uint8Array(apdu.slice(length - 2));
+    this.data = new Uint8Array(apdu.slice(0, (length - 2)));
   }
 
   constructor(apdu: Uint8Array)  {

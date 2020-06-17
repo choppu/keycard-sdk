@@ -12,12 +12,12 @@ export class CashCommandset {
     this.apduChannel = apduChannel;
   }
 
-  select() : APDUResponse {
+  async select() : Promise<APDUResponse> {
     let selectApplet = new APDUCommand(0x00, 0xA4, 4, 0, CASH_INSTANCE_AID);
     return this.apduChannel.send(selectApplet);
   }
 
-  sign(data: Uint8Array) : APDUResponse {
+  async sign(data: Uint8Array) : Promise<APDUResponse> {
     let sign = new APDUCommand(0x80, INS_SIGN, 0x00, 0x00, data);
     return this.apduChannel.send(sign);
   }

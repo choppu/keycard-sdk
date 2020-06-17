@@ -99,9 +99,9 @@ export class Commandset {
     this.secureChannel.setPairing(pairing);
   }
 
-  select() : APDUResponse {
+  async select() : Promise<APDUResponse> {
     let selectApplet = new APDUCommand(0x00, 0xa4, 4, 0, KEYCARD_AID);
-    let resp =  this.apduChannel.send(selectApplet);
+    let resp = await this.apduChannel.send(selectApplet);
 
     if (resp.sw == 0x9000) {
       this.applicationInfo = new ApplicationInfo(resp.data);
@@ -141,19 +141,19 @@ export class Commandset {
     this.secureChannel.autoUnpair(this.apduChannel);
   }
 
-  openSecureChannel(index: number, data: Uint8Array) : APDUResponse {
+  async openSecureChannel(index: number, data: Uint8Array) : Promise<APDUResponse> {
     return this.secureChannel.openSecureChannel(this.apduChannel, index, data);
   }
 
-  mutuallyAuthenticate(data?: Uint8Array) : APDUResponse {
+  async mutuallyAuthenticate(data?: Uint8Array) : Promise<APDUResponse> {
     return this.secureChannel.mutuallyAuthenticate(this.apduChannel, data);
   }
 
-  pair(p1: number, data: Uint8Array) : APDUResponse {
+  async pair(p1: number, data: Uint8Array) : Promise<APDUResponse> {
     return this.secureChannel.pair(this.apduChannel, p1, data);
   }
 
-  unpair(p1: number) : APDUResponse {
+  async unpair(p1: number) : Promise<APDUResponse> {
     return this.secureChannel.unpair(this.apduChannel, p1);
   }
 
@@ -161,41 +161,41 @@ export class Commandset {
     this.secureChannel.unpairOthers(this.apduChannel);
   }
 
-  getStatus(info: number) : APDUResponse {
+  async getStatus(info: number) : Promise<APDUResponse> {
     let getStatus = this.secureChannel.protectedCommand(0x80, INS_GET_STATUS, info, 0, new Uint8Array(0));
     return this.secureChannel.transmit(this.apduChannel, getStatus);
   }
 
-  verifyPIN(pin: string) : APDUResponse {
+  async verifyPIN(pin: string) : Promise<APDUResponse> {
     let verifyPIN = this.secureChannel.protectedCommand(0x80, INS_VERIFY_PIN, 0, 0, CryptoUtils.stringToUint8Array(pin));
     return this.secureChannel.transmit(this.apduChannel, verifyPIN);
   }
 
-  changePIN(pin: string | Uint8Array, pinType = CHANGE_PIN_P1_USER_PIN) : APDUResponse {
+  async changePIN(pin: string | Uint8Array, pinType = CHANGE_PIN_P1_USER_PIN) : Promise<APDUResponse> {
     pin = (typeof pin === "string") ? CryptoUtils.stringToUint8Array(pin) : pin;
     let changePIN = this.secureChannel.protectedCommand(0x80, INS_CHANGE_PIN, pinType, 0, pin);
     return this.secureChannel.transmit(this.apduChannel, changePIN);
   }
 
-  changePUK(puk: string) : APDUResponse {
+  async changePUK(puk: string) : Promise<APDUResponse> {
     return this.changePIN(CryptoUtils.stringToUint8Array(puk), CHANGE_PIN_P1_PUK);
   }
 
-  changePairingPassword(pairingPassword: string) : APDUResponse {
+  async changePairingPassword(pairingPassword: string) : Promise<APDUResponse> {
     return this.changePIN(this.pairingPasswordToSecret(pairingPassword), CHANGE_PIN_P1_PAIRING_SECRET);
   }
 
-  unblockPIN(puk: string, newPin: string) : APDUResponse {
+  async unblockPIN(puk: string, newPin: string) : Promise<APDUResponse> {
     let unblockPIN = this.secureChannel.protectedCommand(0x80, INS_UNBLOCK_PIN, 0, 0, CryptoUtils.stringToUint8Array(puk + newPin));
     return this.secureChannel.transmit(this.apduChannel, unblockPIN);
   }
 
-  loadKey(data: Uint8Array, keyType: number) : APDUResponse {
+  async loadKey(data: Uint8Array, keyType: number) : Promise<APDUResponse> {
     let loadKey = this.secureChannel.protectedCommand(0x80, INS_LOAD_KEY, keyType, 0, data);
     return this.secureChannel.transmit(this.apduChannel, loadKey);
   }
 
-  loadSeed(seed: Uint8Array) : APDUResponse {
+  async loadSeed(seed: Uint8Array) : Promise<APDUResponse> {
     return this.loadKey(seed, LOAD_KEY_P1_SEED);
   }
 
@@ -215,27 +215,27 @@ export class Commandset {
     return this.loadBIP32KeyPair(new BIP32KeyPair(publicKey, privateKey, chainCode), publicKey == null);
   }
 
-  generateMnemonic(checksum: number) : APDUResponse {
+  async generateMnemonic(checksum: number) : Promise<APDUResponse> {
     let generateMnemonic = this.secureChannel.protectedCommand(0x80, INS_GENERATE_MNEMONIC, checksum, 0, new Uint8Array(0));
     return this.secureChannel.transmit(this.apduChannel, generateMnemonic);
   }
 
-  removeKey() : APDUResponse {
+  async removeKey() : Promise<APDUResponse> {
     let removeKey = this.secureChannel.protectedCommand(0x80, INS_REMOVE_KEY, 0, 0, new Uint8Array(0));
     return this.secureChannel.transmit(this.apduChannel, removeKey);
   }
 
-  generateKey() : APDUResponse {
+  async generateKey() : Promise<APDUResponse> {
     let generateKey = this.secureChannel.protectedCommand(0x80, INS_GENERATE_KEY, 0, 0, new Uint8Array(0));
     return this.secureChannel.transmit(this.apduChannel, generateKey);
   }
 
-  sign(data: Uint8Array, p1 = SIGN_P1_CURRENT_KEY) : APDUResponse {
+  async sign(data: Uint8Array, p1 = SIGN_P1_CURRENT_KEY) : Promise<APDUResponse> {
     let sign = this.secureChannel.protectedCommand(0x80, INS_SIGN, p1, 0x00, data);
     return this.secureChannel.transmit(this.apduChannel, sign);
   }
 
-  signWithPath(hash: Uint8Array, path: string, makeCurrent: boolean) : APDUResponse {
+  async signWithPath(hash: Uint8Array, path: string, makeCurrent: boolean) : Promise<APDUResponse> {
     let keyPath = new KeyPath(path);
     let pathData = keyPath.data;
     let data = new Uint8Array(hash.byteLength + pathData.byteLength);
@@ -244,11 +244,11 @@ export class Commandset {
     return this.sign(data, keyPath.source | (makeCurrent ? SIGN_P1_DERIVE_AND_MAKE_CURRENT : SIGN_P1_DERIVE));
   }
 
-  signPinless(hash: Uint8Array) : APDUResponse {
+  async signPinless(hash: Uint8Array) : Promise<APDUResponse> {
     return this.sign(hash, SIGN_P1_PINLESS);
   }
 
-  deriveKey(data: string | Uint8Array, source?: number) : APDUResponse {
+  async deriveKey(data: string | Uint8Array, source?: number) : Promise<APDUResponse> {
     if (typeof data === "string") {
       let path = new KeyPath(data);
       data = path.data;
@@ -261,7 +261,7 @@ export class Commandset {
     return this.secureChannel.transmit(this.apduChannel, deriveKey);  
   }
 
-  setPinlessPath(data: string | Uint8Array) : APDUResponse {
+  async setPinlessPath(data: string | Uint8Array) : Promise<APDUResponse> {
     if (typeof data === "string") {
       let keyPath = new KeyPath(data);
       
@@ -276,11 +276,11 @@ export class Commandset {
     return this.secureChannel.transmit(this.apduChannel, setPinlessPath);
   }
   
-  resetPinlessPath() : APDUResponse{
+  async resetPinlessPath() : Promise<APDUResponse> {
     return this.setPinlessPath(new Uint8Array(0));
   }
 
-  exportKey(derivationOptions: number, publicOnly: boolean, keypath: string | Uint8Array, makeCurrent?: boolean, source?: number) : APDUResponse {
+  async exportKey(derivationOptions: number, publicOnly: boolean, keypath: string | Uint8Array, makeCurrent?: boolean, source?: number) : Promise<APDUResponse> {
     if(typeof keypath === "string") {
       let path = new KeyPath(keypath);
       keypath = path.data;
@@ -296,21 +296,21 @@ export class Commandset {
     return this.secureChannel.transmit(this.apduChannel, exportKey);
   }
 
-  exportCurrentKey(publicOnly: boolean) : APDUResponse {
+  async exportCurrentKey(publicOnly: boolean) : Promise<APDUResponse> {
     return this.exportKey(EXPORT_KEY_P1_CURRENT, publicOnly, new Uint8Array(0));
   }
 
-  getData(dataType: number) : APDUResponse {
+  async getData(dataType: number) : Promise<APDUResponse> {
     let getData = this.secureChannel.protectedCommand(0x80, INS_GET_DATA, dataType, 0, new Uint8Array(0));
     return this.secureChannel.transmit(this.apduChannel, getData);
   }
 
-  storeData(data: Uint8Array, dataType: number) : APDUResponse {
+  async storeData(data: Uint8Array, dataType: number) : Promise<APDUResponse> {
     let storeData = this.secureChannel.protectedCommand(0x80, INS_STORE_DATA, dataType, 0, data);
     return this.secureChannel.transmit(this.apduChannel, storeData);
   }
 
-  setNDEF(ndef: Uint8Array) : APDUResponse {
+  async setNDEF(ndef: Uint8Array) : Promise<APDUResponse> {
     if ((this.applicationInfo.appVersion >> 8) > 2) {
       if ((ndef.byteLength - 2) != ((ndef[0] << 8) | ndef[1])) {
         let tmp = new Uint8Array(ndef.byteLength + 2);
@@ -327,7 +327,7 @@ export class Commandset {
     }
   }
 
-  init(pin: string, puk: string, sharedSecret: string | Uint8Array) : APDUResponse {
+  async init(pin: string, puk: string, sharedSecret: string | Uint8Array) : Promise<APDUResponse> {
     if (typeof sharedSecret === "string") {
       sharedSecret = this.pairingPasswordToSecret(sharedSecret);
     }

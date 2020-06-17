@@ -11,6 +11,7 @@ import { Ethereum } from "./ethereum"
 import { KeyPath } from "./key-path"
 import { Mnemonic } from "./mnemonic"
 import { RecoverableSignature } from "./recoverable-signature"
+import { PCSCCardChannel } from "./pcsc-card-channel"
 
 
 export let Keycard = {
@@ -26,7 +27,8 @@ export let Keycard = {
   Ethereum: Ethereum,
   KeyPath: KeyPath,
   Mnemonic: Mnemonic,
-  RecoverableSignature: RecoverableSignature
+  RecoverableSignature: RecoverableSignature,
+  PCSCCardChannel: PCSCCardChannel
 }
 
 export default Keycard;

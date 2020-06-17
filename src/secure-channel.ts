@@ -104,8 +104,8 @@ export class SecureChannel {
     return new APDUCommand(cla, ins, p1, p2, finalData);
   }
 
-  transmit(apduChannel: CardChannel, apdu: APDUCommand) : APDUResponse {
-    let resp = apduChannel.send(apdu);
+  async transmit(apduChannel: CardChannel, apdu: APDUCommand) : Promise<APDUResponse> {
+    let resp = await apduChannel.send(apdu);
 
     if (resp.sw == 0x6982) {
       this.open = false;
@@ -133,7 +133,7 @@ export class SecureChannel {
     }
   }
 
-  mutuallyAuthenticate(apduChannel: CardChannel, data?: Uint8Array) : APDUResponse {
+  async mutuallyAuthenticate(apduChannel: CardChannel, data?: Uint8Array) : Promise<APDUResponse> {
     data = (!data) ? new Uint8Array(CryptoUtils.getRandomBytes(SC_SECRET_LENGTH)) : data;
     let mutuallyAuthenticate = this.protectedCommand(0x80, INS_MUTUALLY_AUTHENTICATE, 0, 0, data);
     return this.transmit(apduChannel, mutuallyAuthenticate);
@@ -145,18 +145,19 @@ export class SecureChannel {
     }
   }
 
-  autoOpenSecureChannel(apduChannel: CardChannel) : void {
-   let response = this.openSecureChannel(apduChannel, this.pairing.pairingIndex, this.publicKey);
+  async autoOpenSecureChannel(apduChannel: CardChannel) : Promise<void> {
+   let response = await this.openSecureChannel(apduChannel, this.pairing.pairingIndex, this.publicKey);
     this.processOpenSecureChannelResponse(response);
     
-    response = this.mutuallyAuthenticate(apduChannel);
+    response = await this.mutuallyAuthenticate(apduChannel);
     response.checkOK("MUTUALLY AUTHENTICATE failed");
     this.verifyMutuallyAuthenticateResponse(response);
   }
 
-  autoPair(apduChannel: CardChannel, sharedSecret: Uint8Array) : void {
+  async autoPair(apduChannel: CardChannel, sharedSecret: Uint8Array) : Promise<void> {
     let challenge = CryptoUtils.getRandomBytes(32);
-    let resp = this.pair(apduChannel, PAIR_P1_FIRST_STEP, challenge).checkOK("Pairing failed on step 1");
+    let resp = await this.pair(apduChannel, PAIR_P1_FIRST_STEP, challenge);
+    resp.checkOK("Pairing failed on step 1");
 
     let respData = resp.data;
     let cardCryptogram = new Uint8Array(32);
@@ -178,7 +179,8 @@ export class SecureChannel {
     sha256Data.update(CryptoJS.lib.WordArray.create(cardChallenge));
     checkCryptogram = CryptoUtils.wordArrayToByteArray(sha256Data.finalize());
 
-    resp = this.pair(apduChannel, PAIR_P1_LAST_STEP, checkCryptogram).checkOK("Pairing failed on step 2");
+    resp = await this.pair(apduChannel, PAIR_P1_LAST_STEP, checkCryptogram);
+    resp.checkOK("Pairing failed on step 2");
     respData = resp.data;
 
     sha256Data.update(CryptoJS.lib.WordArray.create(sharedSecret));
@@ -188,31 +190,33 @@ export class SecureChannel {
     this.pairing = new Pairing(pKey, respData[0]);
   }
 
-  autoUnpair(apduChannel: CardChannel) : void {
-    this.unpair(apduChannel, this.pairing.pairingIndex).checkOK("Unpairing failed");
+  async autoUnpair(apduChannel: CardChannel) : Promise<void> {
+    let resp = await this.unpair(apduChannel, this.pairing.pairingIndex);
+    resp.checkOK("Unpairing failed");
   }
 
-  openSecureChannel(apduChannel: CardChannel, index: number, data: Uint8Array) : APDUResponse {
+  async openSecureChannel(apduChannel: CardChannel, index: number, data: Uint8Array) : Promise<APDUResponse> {
     this.open = false;
     let openSecureChannel = new APDUCommand(0x80, INS_OPEN_SECURE_CHANNEL, index, 0, data);
-    return apduChannel.send(openSecureChannel);
+    return await apduChannel.send(openSecureChannel);
   }
 
-  pair(apduChannel: CardChannel, p1: number, data: Uint8Array) : APDUResponse {
+  async pair(apduChannel: CardChannel, p1: number, data: Uint8Array) : Promise<APDUResponse> {
     let pair = new APDUCommand(0x80, INS_PAIR, p1, 0, data);
     return this.transmit(apduChannel, pair);
   }
 
-  unpair(apduChannel: CardChannel, p1: number) : APDUResponse {
+  async unpair(apduChannel: CardChannel, p1: number) : Promise<APDUResponse> {
     let unpair = this.protectedCommand(0x80, INS_UNPAIR, p1, 0, new Uint8Array(0));
     return this.transmit(apduChannel, unpair);
   }
 
-  unpairOthers(apduChannel: CardChannel) : void {
+  async unpairOthers(apduChannel: CardChannel) : Promise<void> {
     for (let i = 0; i < PAIRING_MAX_CLIENT_COUNT; i++) {
       if (i != this.pairing.pairingIndex) {
         let unpair = this.protectedCommand(0x80, INS_UNPAIR, i, 0, new Uint8Array(0));
-        this.transmit(apduChannel, unpair).checkOK();
+        let resp = await this.transmit(apduChannel, unpair);
+        resp.checkOK();
       }
     }
   }

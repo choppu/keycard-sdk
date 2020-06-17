@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@pokusew/pcsclite": "^0.6.0",
+    "@types/node": "^14.0.13",
     "@types/secp256k1": "^4.0.1",
     "crypto-js": "^4.0.0",
     "cryptojs-extension": "github:pkaminski/cryptojs-extension",
