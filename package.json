@@ -1,0 +1,26 @@
+{
+  "name": "keycard-sdk",
+  "version": "3.0.0",
+  "description": "Keycard Typescript SDK for Desktop",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "ci": "npm t & wait",
+    "test": "jest"
+  },
+  "author": "Ksenia Balistreri",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^25.2.3",
+    "jest": "^26.0.1",
+    "ts-jest": "^26.1.0",
+    "typescript": "^3.9.3"
+  },
+  "dependencies": {
+    "@pokusew/pcsclite": "^0.6.0",
+    "@types/secp256k1": "^4.0.1",
+    "crypto-js": "^4.0.0",
+    "cryptojs-extension": "github:pkaminski/cryptojs-extension",
+    "secp256k1": "^4.0.1"
+  }
+}
