@@ -31,8 +31,8 @@ const CHANGE_PIN_P1_USER_PIN = 0x00;
 const CHANGE_PIN_P1_PUK = 0x01;
 const CHANGE_PIN_P1_PAIRING_SECRET = 0x02;
 
-const GET_STATUS_P1_APPLICATION = 0x00;
-const GET_STATUS_P1_KEY_PATH = 0x01;
+export const GET_STATUS_P1_APPLICATION = 0x00;
+export const GET_STATUS_P1_KEY_PATH = 0x01;
 
 const LOAD_KEY_P1_EC = 0x01;
 const LOAD_KEY_P1_EXT_EC = 0x02;
@@ -212,7 +212,7 @@ export class Commandset {
   }
 
   loadKeyPair(publicKey: Uint8Array, privateKey: Uint8Array, chainCode: Uint8Array) {
-    return this.loadBIP32KeyPair(new BIP32KeyPair(publicKey, privateKey, chainCode), publicKey == null);
+    return this.loadBIP32KeyPair(new BIP32KeyPair(privateKey, chainCode, publicKey), publicKey == null);
   }
 
   async generateMnemonic(checksum: number) : Promise<APDUResponse> {

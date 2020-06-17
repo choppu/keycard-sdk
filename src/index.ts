@@ -12,6 +12,7 @@ import { KeyPath } from "./key-path"
 import { Mnemonic } from "./mnemonic"
 import { RecoverableSignature } from "./recoverable-signature"
 import { PCSCCardChannel } from "./pcsc-card-channel"
+import { CryptoUtils } from "./crypto-utils"
 
 
 export let Keycard = {
@@ -28,7 +29,8 @@ export let Keycard = {
   KeyPath: KeyPath,
   Mnemonic: Mnemonic,
   RecoverableSignature: RecoverableSignature,
-  PCSCCardChannel: PCSCCardChannel
+  PCSCCardChannel: PCSCCardChannel,
+  CryptoUtils: CryptoUtils
 }
 
 export default Keycard;

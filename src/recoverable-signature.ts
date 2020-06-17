@@ -40,10 +40,10 @@ export class RecoverableSignature {
         this.recId = i;
         break;
       }
+    }
 
-      if (recId == -1) {
-        throw new Error("Error: Unrecoverable signature, cannot find recId");
-      }
+    if (recId == -1) {
+      throw new Error("Error: Unrecoverable signature, cannot find recId");
     }
   }
 

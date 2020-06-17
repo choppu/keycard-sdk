@@ -19,7 +19,7 @@ export class BIP32KeyPair {
     this.publicKey = secp256k1.publicKeyCreate(this.privateKey, false);
   }
 
-  constructor(publicKey: Uint8Array, privateKey: Uint8Array, chainCode: Uint8Array) {
+  constructor(privateKey: Uint8Array, chainCode: Uint8Array, publicKey: Uint8Array) {
     if (privateKey == null && (chainCode != null || publicKey == null))  {
       throw new Error ("Error: Private key can be null only if the public key is not null and the chain code is null");
     }
@@ -46,7 +46,7 @@ export class BIP32KeyPair {
     return new BIP32KeyPair(mac.subarray(0, 32), mac.subarray(32), null);
   }
 
-  fromTLV(tlvData: Uint8Array) : BIP32KeyPair {
+  public static fromTLV(tlvData: Uint8Array) : BIP32KeyPair {
     let tlv = new BERTLV(tlvData);
     tlv.enterConstructed(TLV_KEY_TEMPLATE);
 
