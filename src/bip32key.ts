@@ -40,7 +40,9 @@ export class BIP32KeyPair {
 
   public static fromBinarySeed(binarySeed: Uint8Array) : BIP32KeyPair {
     let binarySeedWordArr = CryptoJS.lib.WordArray.create(binarySeed);
-    let wordArr = CryptoJS.HmacSHA512("Bitcoin seed", binarySeedWordArr);
+    let key = CryptoUtils.stringToUint8Array("Bitcoin seed");
+    let keyWArray = CryptoJS.lib.WordArray.create(key);
+    let wordArr = CryptoJS.HmacSHA512(binarySeedWordArr, keyWArray);
     let mac = CryptoUtils.wordArrayToByteArray(wordArr);
 
     return new BIP32KeyPair(mac.subarray(0, 32), mac.subarray(32), null);
