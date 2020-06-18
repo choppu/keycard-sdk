@@ -1,6 +1,6 @@
+import { Constants } from "./constants"
+
 const TLV_BOOL = 0x01;
-export const TLV_INT = 0x02;
-export const END_OF_TLV = 0xffffffff;
 
 export class BERTLV {
   buffer: Uint8Array;
@@ -29,7 +29,7 @@ export class BERTLV {
   }
 
   readInt() : number {
-    let val = this.readPrimitive(TLV_INT);
+    let val = this.readPrimitive(Constants.TLV_INT);
 
     switch (val.byteLength) {
       case 1:
@@ -46,7 +46,7 @@ export class BERTLV {
   }
 
   readTag() : number {
-    return (this.position < this.buffer.byteLength) ? this.buffer[this.position++] : END_OF_TLV;
+    return (this.position < this.buffer.byteLength) ? this.buffer[this.position++] : Constants.END_OF_TLV;
   }
 
   readLength() : number {

@@ -13,6 +13,7 @@ import { Mnemonic } from "./mnemonic"
 import { RecoverableSignature } from "./recoverable-signature"
 import { PCSCCardChannel } from "./pcsc-card-channel"
 import { CryptoUtils } from "./crypto-utils"
+import { Constants } from "./constants"
 
 
 export let Keycard = {
@@ -25,12 +26,13 @@ export let Keycard = {
   BIP32KeyPair: BIP32KeyPair,
   CashApplicationInfo: CashApplicationInfo,
   CashCommandset: CashCommandset,
-  Ethereum: Ethereum,
   KeyPath: KeyPath,
   Mnemonic: Mnemonic,
   RecoverableSignature: RecoverableSignature,
   PCSCCardChannel: PCSCCardChannel,
-  CryptoUtils: CryptoUtils
+  Ethereum: Ethereum,
+  CryptoUtils: CryptoUtils,
+  Constants: Constants
 }
 
 export default Keycard;

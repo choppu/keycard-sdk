@@ -1,7 +1,7 @@
 import { CardChannel } from "./card-channel"
 import { APDUResponse } from "./apdu-response";
 import { APDUCommand } from "./apdu-command";
-import { INS_SIGN } from "./commandset"
+import { Constants } from "./constants";
 
 const CASH_INSTANCE_AID = new Uint8Array([0xa0, 0x00, 0x00, 0x08, 0x04, 0x00, 0x01, 0x03, 0x01]);
 
@@ -18,7 +18,7 @@ export class CashCommandset {
   }
 
   async sign(data: Uint8Array) : Promise<APDUResponse> {
-    let sign = new APDUCommand(0x80, INS_SIGN, 0x00, 0x00, data);
+    let sign = new APDUCommand(0x80, Constants.INS_SIGN, 0x00, 0x00, data);
     return this.apduChannel.send(sign);
   }
 }

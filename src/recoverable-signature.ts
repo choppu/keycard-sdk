@@ -1,7 +1,7 @@
-import { BERTLV, TLV_INT } from "./ber-tlv"
-import { TLV_PUB_KEY } from "./application-info"
+import { BERTLV } from "./ber-tlv"
 import { CryptoUtils } from "./crypto-utils"
 import { Ethereum } from "./ethereum"
+import { Constants } from "./constants";
 
 const secp256k1 = require('secp256k1');
 
@@ -21,10 +21,10 @@ export class RecoverableSignature {
   constructor(hash: Uint8Array, tlvData: Uint8Array) {
     let tlv = new BERTLV(tlvData);
     tlv.enterConstructed(TLV_SIGNATURE_TEMPLATE);
-    this.publicKey = tlv.readPrimitive(TLV_PUB_KEY);
+    this.publicKey = tlv.readPrimitive(Constants.TLV_PUB_KEY);
     tlv.enterConstructed(TLV_ECDSA_TEMPLATE);
-    this.r = this.toUInt(tlv.readPrimitive(TLV_INT));
-    this.s = this.toUInt(tlv.readPrimitive(TLV_INT));
+    this.r = this.toUInt(tlv.readPrimitive(Constants.TLV_INT));
+    this.s = this.toUInt(tlv.readPrimitive(Constants.TLV_INT));
 
     let recId = -1;
 

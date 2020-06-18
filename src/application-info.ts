@@ -1,8 +1,8 @@
-import { BERTLV, END_OF_TLV } from "./ber-tlv"
+import { BERTLV } from "./ber-tlv"
 import { CryptoUtils } from "./crypto-utils"
+import { Constants } from "./constants"
 
-export const TLV_APPLICATION_INFO_TEMPLATE = 0xa4;
-export const TLV_PUB_KEY = 0x80;
+
 const TLV_UID = 0x8f;
 const TLV_KEY_UID = 0x8e;
 const TLV_CAPABILITIES = 0x8d;
@@ -29,8 +29,8 @@ export class ApplicationInfo {
     let topTag = tlv.readTag();
     tlv.unreadLastTag();
 
-    if (topTag == TLV_PUB_KEY) {
-      this.secureChannelPubKey = tlv.readPrimitive(TLV_PUB_KEY);
+    if (topTag == Constants.TLV_PUB_KEY) {
+      this.secureChannelPubKey = tlv.readPrimitive(Constants.TLV_PUB_KEY);
       this.initializedCard = false;
       this.capabilities = CAPABILITY_CREDENTIALS_MANAGEMENT;
 
@@ -41,14 +41,14 @@ export class ApplicationInfo {
       return;
     }
 
-    tlv.enterConstructed(TLV_APPLICATION_INFO_TEMPLATE);
+    tlv.enterConstructed(Constants.TLV_APPLICATION_INFO_TEMPLATE);
     this.instanceUID = tlv.readPrimitive(TLV_UID);
-    this.secureChannelPubKey = tlv.readPrimitive(TLV_PUB_KEY);
+    this.secureChannelPubKey = tlv.readPrimitive(Constants.TLV_PUB_KEY);
     this.appVersion = tlv.readInt();
     this.freePairingSlots = tlv.readInt();
     this.keyUID = tlv.readPrimitive(TLV_KEY_UID);
 
-    if (tlv.readTag() != END_OF_TLV) {
+    if (tlv.readTag() != Constants.END_OF_TLV) {
       tlv.unreadLastTag();
       this.capabilities = tlv.readPrimitive(TLV_CAPABILITIES)[0];
     } else {

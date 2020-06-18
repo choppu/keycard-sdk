@@ -1,5 +1,5 @@
 import { KeyPath } from "../src/key-path"
-import { DERIVE_SOURCE } from "../src/commandset"
+import { Constants } from "../src/constants"
 
 const path = "m/44'/0'/0'/0/0";
 const parentPath = "../44'/0'/0'/0/0";
@@ -10,7 +10,7 @@ const keypath = new KeyPath(path);
 const parentKeypath = new KeyPath(parentPath);
 const currentKeypath = new KeyPath(currentPath);
 const defKeypath = new KeyPath(defPath);
-const keypathFromBytes = new KeyPath(pathBytes, DERIVE_SOURCE.deriveP1SourceMaster);
+const keypathFromBytes = new KeyPath(pathBytes, Constants.DERIVE_SOURCE.deriveP1SourceMaster);
 
 test('KeyPath constructor function', () => {
   expect(keypath).toMatchObject(keypathFromBytes);

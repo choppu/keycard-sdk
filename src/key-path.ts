@@ -1,4 +1,4 @@
-import { DERIVE_SOURCE } from "./commandset"
+import { Constants } from "./constants";
 
 export class KeyPath {
   source: number;
@@ -30,7 +30,7 @@ export class KeyPath {
     this.data[off + 3] = component;
   }
 
-  constructor(data: string | Uint8Array, source = DERIVE_SOURCE.deriveP1SourceMaster) {
+  constructor(data: string | Uint8Array, source = Constants.DERIVE_SOURCE.deriveP1SourceMaster) {
     if(typeof data === "string") {
       let i = 0;
       let dataArr = data.split("/");
@@ -39,19 +39,19 @@ export class KeyPath {
 
       switch(sourceOrFirstElement) {
       case "m":
-        this.source = DERIVE_SOURCE.deriveP1SourceMaster;
+        this.source = Constants.DERIVE_SOURCE.deriveP1SourceMaster;
         len--;
         break;
       case "..":
-        this.source = DERIVE_SOURCE.deriveP1SourceParent;
+        this.source = Constants.DERIVE_SOURCE.deriveP1SourceParent;
         len--;
         break;
       case ".":
-        this.source = DERIVE_SOURCE.deriveP1SourceCurrent;
+        this.source = Constants.DERIVE_SOURCE.deriveP1SourceCurrent;
         len--;
         break;
       default:
-        this.source = DERIVE_SOURCE.deriveP1SourceCurrent;
+        this.source = Constants.DERIVE_SOURCE.deriveP1SourceCurrent;
         i--;
         break;
       }
@@ -85,13 +85,13 @@ export class KeyPath {
     let sb = [];
 
     switch(this.source) {
-      case DERIVE_SOURCE.deriveP1SourceMaster:
+      case Constants.DERIVE_SOURCE.deriveP1SourceMaster:
         sb.push("m");
         break;
-      case DERIVE_SOURCE.deriveP1SourceParent:
+      case Constants.DERIVE_SOURCE.deriveP1SourceParent:
         sb.push("..");
         break;
-      case DERIVE_SOURCE.deriveP1SourceCurrent:
+      case Constants.DERIVE_SOURCE.deriveP1SourceCurrent:
         sb.push(".");
         break;
     }

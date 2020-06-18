@@ -3,10 +3,12 @@
   "version": "3.0.0",
   "description": "Keycard Typescript SDK for Desktop",
   "main": "dist/index.js",
+  "files": ["dist"],
   "scripts": {
     "build": "tsc",
     "ci": "npm t & wait",
-    "test": "jest"
+    "test": "jest",
+    "prepare": "npm run build"
   },
   "author": "Ksenia Balistreri",
   "license": "ISC",

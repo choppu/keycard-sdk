@@ -7,6 +7,7 @@ import { APDUCommand } from "./apdu-command"
 import { CryptoUtils } from "./crypto-utils"
 import { BIP32KeyPair } from "./bip32key"
 import { KeyPath } from "./key-path"
+import { Constants } from "./constants"
 
 const CryptoJS = require("crypto-js");
 
@@ -21,7 +22,6 @@ const INS_DERIVE_KEY = 0xd1;
 const INS_GENERATE_MNEMONIC = 0xd2;
 const INS_REMOVE_KEY = 0xd3;
 const INS_GENERATE_KEY = 0xd4;
-export const INS_SIGN = 0xc0;
 const INS_SET_PINLESS_PATH = 0xc1;
 const INS_EXPORT_KEY = 0xc2;
 const INS_GET_DATA = 0xca;
@@ -31,38 +31,16 @@ const CHANGE_PIN_P1_USER_PIN = 0x00;
 const CHANGE_PIN_P1_PUK = 0x01;
 const CHANGE_PIN_P1_PAIRING_SECRET = 0x02;
 
-export const GET_STATUS_P1_APPLICATION = 0x00;
-export const GET_STATUS_P1_KEY_PATH = 0x01;
-
 const LOAD_KEY_P1_EC = 0x01;
 const LOAD_KEY_P1_EXT_EC = 0x02;
 const LOAD_KEY_P1_SEED = 0x03;
-
-export const DERIVE_SOURCE = {
-  deriveP1SourceMaster: 0x00,
-  deriveP1SourceParent: 0x40,
-  deriveP1SourceCurrent: 0x80
-}
-
-const DUPLICATE_KEY_P1_START = 0x00;
-const DUPLICATE_KEY_P1_ADD_ENTROPY = 0x01;
-const DUPLICATE_KEY_P1_EXPORT = 0x02;
-const DUPLICATE_KEY_P1_IMPORT = 0x03;
 
 const SIGN_P1_CURRENT_KEY = 0x00;
 const SIGN_P1_DERIVE = 0x01;
 const SIGN_P1_DERIVE_AND_MAKE_CURRENT = 0x02;
 const SIGN_P1_PINLESS = 0x03;
 
-const STORE_DATA_P1_PUBLIC = 0x00;
 const STORE_DATA_P1_NDEF = 0x01;
-const STORE_DATA_P1_CASH = 0x02;
-
-const GENERATE_MNEMONIC_12_WORDS = 0x04;
-const GENERATE_MNEMONIC_15_WORDS = 0x05;
-const GENERATE_MNEMONIC_18_WORDS = 0x06;
-const GENERATE_MNEMONIC_21_WORDS = 0x07;
-const GENERATE_MNEMONIC_24_WORDS = 0x08;
 
 const EXPORT_KEY_P1_CURRENT = 0x00;
 const EXPORT_KEY_P1_DERIVE = 0x01;
@@ -70,8 +48,6 @@ const EXPORT_KEY_P1_DERIVE_AND_MAKE_CURRENT = 0x02;
 
 const EXPORT_KEY_P2_PRIVATE_AND_PUBLIC = 0x00;
 const EXPORT_KEY_P2_PUBLIC_ONLY = 0x01;
-
-const TLV_APPLICATION_INFO_TEMPLATE = 0xa4;
 
 const KEYCARD_AID = new Uint8Array([0xa0, 0x00, 0x00, 0x08, 0x04, 0x00, 0x01, 0x01, 0x01]);
 
@@ -231,7 +207,7 @@ export class Commandset {
   }
 
   async sign(data: Uint8Array, p1 = SIGN_P1_CURRENT_KEY) : Promise<APDUResponse> {
-    let sign = this.secureChannel.protectedCommand(0x80, INS_SIGN, p1, 0x00, data);
+    let sign = this.secureChannel.protectedCommand(0x80, Constants.INS_SIGN, p1, 0x00, data);
     return this.secureChannel.transmit(this.apduChannel, sign);
   }
 
@@ -255,7 +231,7 @@ export class Commandset {
       source = path.source;
     }
 
-    source = (source == undefined) ? DERIVE_SOURCE.deriveP1SourceMaster : source;
+    source = (source == undefined) ? Constants.DERIVE_SOURCE.deriveP1SourceMaster : source;
 
     let deriveKey = this.secureChannel.protectedCommand(0x80, INS_DERIVE_KEY, source, 0x00, data);
     return this.secureChannel.transmit(this.apduChannel, deriveKey);  
@@ -265,7 +241,7 @@ export class Commandset {
     if (typeof data === "string") {
       let keyPath = new KeyPath(data);
       
-      if (keyPath.source != DERIVE_SOURCE.deriveP1SourceMaster) {
+      if (keyPath.source != Constants.DERIVE_SOURCE.deriveP1SourceMaster) {
         throw new Error("Error: Only absolute paths can be set as PINLESS path");
       } else {
         data = keyPath.data;
