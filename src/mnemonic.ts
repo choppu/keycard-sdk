@@ -48,13 +48,17 @@ export class Mnemonic {
     return wordsArr.join(" ");
   }
 
-  toBinarySeed(password = "", mnemonicPhrase = this.toMnemonicPhrase()) : Uint8Array {
+  static toBinarySeed(password = "", mnemonicPhrase?: string) : Uint8Array {
     let salt = "mnemonic" + password;
     let iterationCount = 2048;
     let kSize = 512 / 32;
     let PBKDF2WordArr = CryptoJS.PBKDF2(mnemonicPhrase, salt, {keySize: kSize, iterations: iterationCount, hasher: CryptoJS.algo.SHA512});
 
     return CryptoUtils.wordArrayToByteArray(PBKDF2WordArr);
+  }
+
+  toBinarySeed(password = "") : Uint8Array {
+    return Mnemonic.toBinarySeed(password, this.toMnemonicPhrase());
   }
 
   toBIP32KeyPair(password = "") : BIP32KeyPair {
