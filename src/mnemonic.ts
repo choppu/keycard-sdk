@@ -48,7 +48,7 @@ export class Mnemonic {
     return wordsArr.join(" ");
   }
 
-  static toBinarySeed(password = "", mnemonicPhrase?: string) : Uint8Array {
+  public static toBinarySeed(mnemonicPhrase: string, password = "") : Uint8Array {
     let salt = "mnemonic" + password;
     let iterationCount = 2048;
     let kSize = 512 / 32;
@@ -58,7 +58,7 @@ export class Mnemonic {
   }
 
   toBinarySeed(password = "") : Uint8Array {
-    return Mnemonic.toBinarySeed(password, this.toMnemonicPhrase());
+    return Mnemonic.toBinarySeed(this.toMnemonicPhrase(), password);
   }
 
   toBIP32KeyPair(password = "") : BIP32KeyPair {
