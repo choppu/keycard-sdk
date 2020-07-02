@@ -1,4 +1,4 @@
-# Keycard Typescript SDK for Desktop
+# Keycard Typescript SDK
 
 Keycard SDK is a Typescript implementation of the Keycard API. 
 
