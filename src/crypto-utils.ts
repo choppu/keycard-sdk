@@ -56,4 +56,8 @@ export namespace CryptoUtils {
       return crypto.randomBytes(size);
     }
   }
+
+  export function checkAllDigits(value: string) : boolean {
+    return value.split("").every((c) => '0123456789'.includes(c));
+  }
 }

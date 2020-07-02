@@ -1,4 +1,5 @@
 import { Constants } from "./constants";
+import { CryptoUtils } from "./crypto-utils";
 
 export class KeyPath {
   source: number;
@@ -14,8 +15,8 @@ export class KeyPath {
       sign = 0;
     }
 
-    if (num.startsWith("+") || num.startsWith("-")) {
-      throw new Error ("Error: No sign allowed");
+    if (!CryptoUtils.checkAllDigits(num)) {
+      throw new Error ("Error: Only digits allowed");
     }
 
     return (sign | parseInt(num));
@@ -62,7 +63,7 @@ export class KeyPath {
 
       this.data = new Uint8Array(4 * len);
 
-      for(let y = 0; i < len; i++, y++) {
+      for(let y = 0; y < len; i++, y++) {
         let component = this.parseComponent(dataArr[i]);
         this.writeComponent(component, y);
       }
