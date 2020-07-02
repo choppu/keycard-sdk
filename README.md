@@ -2,7 +2,7 @@
 
 Keycard SDK is a Typescript implementation of the Keycard API. 
 
-## Installanion
+## Installation
 
 You can install Keycard SDK using npm.
 
