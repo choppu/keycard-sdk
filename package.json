@@ -1,7 +1,7 @@
 {
   "name": "keycard-sdk",
   "version": "3.0.0",
-  "description": "Keycard Typescript SDK for Desktop",
+  "description": "Keycard Typescript SDK",
   "main": "dist/index.js",
   "files": ["dist"],
   "scripts": {
@@ -11,7 +11,7 @@
     "prepare": "npm run build"
   },
   "author": "Ksenia Balistreri",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "@types/jest": "^25.2.3",
     "jest": "^26.0.1",
