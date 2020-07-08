@@ -6,6 +6,7 @@ import { APDUResponse } from "./apdu-response";
 import { APDUException } from "./apdu-exception";
 import { Constants } from "./constants"
 import { GlobalPlatformCrypto } from "./global-platform-crypto";
+import { APDUCommand } from "./apdu-command";
 
 const DERIVATION_PURPOSE_ENC = new Uint8Array([0x01, 0x82]);
 const DERIVATION_PURPOSE_MAC = new Uint8Array([0x01, 0x01]);
@@ -20,6 +21,11 @@ export class SCP02Channel {
     this.wrapper = new SCP02Wrapper(scp02Keys.macKey);
   }
 
+  async send(apduCmd: APDUCommand) : Promise<APDUResponse> {
+    let wrappedAPDUCommand = this.wrapper.wrap(apduCmd);
+    return this.apduChannel.send(wrappedAPDUCommand);
+  }
+
   static verifyChallenge(hostChallenge: Uint8Array, scp02Keys: SCP02Keys, apduResp: APDUResponse) : SCP02Session {
     if (apduResp.sw == Constants.SW_SECURITY_CONDITION_NOT_SATISFIED) {
       throw new APDUException("Error: Security condition not satisfied", apduResp.sw);
@@ -31,8 +37,8 @@ export class SCP02Channel {
 
     let data = apduResp.data;
 
-    if (data.length != 28) {
-      throw new APDUException("Error: Wrong data length, expected 28, got " + data.length, apduResp.sw);
+    if (data.byteLength != 28) {
+      throw new APDUException("Error: Wrong data length, expected 28, got " + data.byteLength, apduResp.sw);
     }
 
     let cardChallenge = data.subarray(12, 20);

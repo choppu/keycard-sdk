@@ -19,6 +19,7 @@ export namespace Constants {
   export const GENERATE_MNEMONIC_21_WORDS = 0x07;
   export const GENERATE_MNEMONIC_24_WORDS = 0x08;
 
+  export const SW_OK = 0x9000;
   export const SW_AUTHENTICATION_METHOD_BLOCKED = 0x6983;
   export const SW_SECURITY_CONDITION_NOT_SATISFIED = 0x6982;
   export const SW_CARD_LOCKED = 0x6283;

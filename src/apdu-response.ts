@@ -1,7 +1,6 @@
 import {APDUException, WrongPINException} from "./apdu-exception"
 import { Constants } from "./constants";
 
-const SW_OK = 0x9000;
 const SW_WRONG_PIN_MASK = 0x63C0;
 
 export class APDUResponse {
@@ -30,7 +29,7 @@ export class APDUResponse {
   }
 
   isOK() : boolean {
-    return this.sw == SW_OK;
+    return this.sw == Constants.SW_OK;
   }
 
   checkSW(codes: number|number[], message = null) : APDUResponse {
@@ -59,7 +58,7 @@ export class APDUResponse {
   }
 
   checkOK(message = null) : APDUResponse {
-    return this.checkSW(SW_OK, message);
+    return this.checkSW(Constants.SW_OK, message);
   }
 
   checkAuthOK() : APDUResponse {
