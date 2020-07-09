@@ -12,7 +12,7 @@ export class SCP02Wrapper {
   }
 
   wrap(cmd: APDUCommand): APDUCommand {
-    let cla = (cmd.cla | 0x04) & 0xff;
+    let cla = cmd.cla | 0x04;
     let data = cmd.data;
 
     let macData = new Uint8Array(data.byteLength + 5);

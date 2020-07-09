@@ -26,42 +26,6 @@ export class GlobalPlatformCommandset {
     this.scp02Keys = new SCP02Keys(developmentKey, developmentKey, developmentKey);
   }
 
-  async select(): Promise<APDUResponse> {
-    let cmd = new APDUCommand(0x00, GlobalPlatformConstants.INS_SELECT, GlobalPlatformConstants.SELECT_P1_BY_NAME, 0, new Uint8Array(0));
-    return this.apduChannel.send(cmd);
-  }
-
-  async initializeUpdate(hostChallenge: Uint8Array): Promise<APDUResponse> {
-    let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_INITIALIZE_UPDATE, 0, 0, hostChallenge, true);
-    let apduResp = (await this.apduChannel.send(cmd)).checkOK();
-
-    try {
-      this.scp02Session = SCP02Channel.verifyChallenge(hostChallenge, this.scp02Keys, apduResp);
-    } catch (err) {
-      if (err instanceof APDUException) {
-        this.scp02Session = SCP02Channel.verifyChallenge(hostChallenge, gpDefaultKeys, apduResp);
-        this.scp02Session.useFallbackKeys();
-      }
-    }
-
-    this.secureChannel = new SCP02Channel(this.apduChannel, this.scp02Session.scp02Keys);
-
-    return apduResp;
-  }
-
-  async externalAuthenticate(hostChallenge: Uint8Array): Promise<APDUResponse> {
-    let cardChallenge = this.scp02Session.cardChallenge;
-    let data = new Uint8Array(cardChallenge.byteLength + hostChallenge.byteLength);
-    data.set(cardChallenge, 0);
-    data.set(hostChallenge, cardChallenge.byteLength);
-
-    let paddedData = GlobalPlatformCrypto.appendDESPadding(data);
-    let hostCryptogram = GlobalPlatformCrypto.mac3des(this.scp02Session.scp02Keys.encKey, paddedData, new Uint8Array(8));
-
-    let cmd = new APDUCommand(0x84, GlobalPlatformConstants.INS_EXTERNAL_AUTHENTICATE, GlobalPlatformConstants.EXTERNAL_AUTHENTICATE_P1, 0, hostCryptogram);
-    return this.secureChannel.send(cmd);
-  }
-
   writeSCP02Key(arr: number[], key: Uint8Array): void {
     let encrypted = GlobalPlatformCrypto.ecb3des(this.scp02Session.scp02Keys.dekKey, key);
     let kcv = GlobalPlatformCrypto.kcv3des(key);
@@ -87,6 +51,42 @@ export class GlobalPlatformCommandset {
     return this.secureChannel.send(cmd);
   }
 
+  async select(): Promise<APDUResponse> {
+    let cmd = new APDUCommand(0x00, GlobalPlatformConstants.INS_SELECT, GlobalPlatformConstants.SELECT_P1_BY_NAME, 0, new Uint8Array(0));
+    return this.apduChannel.send(cmd);
+  }
+
+  async externalAuthenticate(hostChallenge: Uint8Array): Promise<APDUResponse> {
+    let cardChallenge = this.scp02Session.cardChallenge;
+    let data = new Uint8Array(cardChallenge.byteLength + hostChallenge.byteLength);
+    data.set(cardChallenge, 0);
+    data.set(hostChallenge, cardChallenge.byteLength);
+
+    let paddedData = GlobalPlatformCrypto.appendDESPadding(data);
+    let hostCryptogram = GlobalPlatformCrypto.mac3des(this.scp02Session.scp02Keys.encKey, paddedData, new Uint8Array(8));
+
+    let cmd = new APDUCommand(0x84, GlobalPlatformConstants.INS_EXTERNAL_AUTHENTICATE, GlobalPlatformConstants.EXTERNAL_AUTHENTICATE_P1, 0, hostCryptogram);
+    return this.secureChannel.send(cmd);
+  }
+
+  async initializeUpdate(hostChallenge: Uint8Array): Promise<APDUResponse> {
+    let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_INITIALIZE_UPDATE, 0, 0, hostChallenge, true);
+    let apduResp = (await this.apduChannel.send(cmd)).checkOK();
+
+    try {
+      this.scp02Session = SCP02Channel.verifyChallenge(hostChallenge, this.scp02Keys, apduResp);
+    } catch (err) {
+      if (err.sw) {
+        this.scp02Session = SCP02Channel.verifyChallenge(hostChallenge, gpDefaultKeys, apduResp);
+        this.scp02Session.useFallbackKeys();
+      }
+    }
+
+    this.secureChannel = new SCP02Channel(this.apduChannel, this.scp02Session.scp02Keys);
+
+    return apduResp;
+  }
+
   async openSecureChannel(autoUpgradeKeys = true): Promise<void> {
     let hostChallenge = CryptoUtils.getRandomBytes(8);
     (await this.initializeUpdate(hostChallenge)).checkOK();
@@ -95,6 +95,85 @@ export class GlobalPlatformCommandset {
     if (this.scp02Session.fallbackKeys && autoUpgradeKeys) {
       (await this.putSCP02Keys(0, 1, this.scp02Keys.encKey, this.scp02Keys.macKey, this.scp02Keys.dekKey)).checkOK();
     }
+  }
+
+  async load(data: Uint8Array, count: number, hasMoreBlocks: boolean): Promise<APDUResponse> {
+    let p1 = hasMoreBlocks ? GlobalPlatformConstants.LOAD_P1_MORE_BLOCKS : GlobalPlatformConstants.LOAD_P1_LAST_BLOCK;
+    let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_LOAD, p1, count, data);
+    return this.secureChannel.send(cmd);
+  }
+
+  async loadKeycardPackage(cap: Uint8Array, cb: (loadedBlock: number, blockCount: number) => void): Promise<void> {
+    (await this.installForLoad(GlobalPlatformConstants.PACKAGE_AID)).checkOK();
+
+    let load = new Load(cap);
+
+    let block: Uint8Array;
+    let steps = load.blocksCount();
+
+    while ((block = load.nextDataBlock()) != null) {
+      (await this.load(block, (load.count - 1), load.hasMore())).checkOK();
+      cb(load.count, steps);
+    }
+  }
+
+  async installForLoad(aid: Uint8Array, sdAid = new Uint8Array(0)): Promise<APDUResponse> {
+    let data = new Uint8Array(aid.byteLength + sdAid.byteLength + 5);
+    data[0] = aid.byteLength;
+    data.set(aid, 1);
+    data[aid.length] = sdAid.byteLength;
+    data.set(sdAid, aid.length + 1);
+
+    let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_INSTALL, GlobalPlatformConstants.INSTALL_FOR_LOAD_P1, 0, data);
+    return this.secureChannel.send(cmd);
+  }
+
+  async installForInstall(packageAID: Uint8Array, appletAID: Uint8Array, instanceAID: Uint8Array, params: Uint8Array): Promise<APDUResponse> {
+    let data = new Uint8Array(packageAID.byteLength + appletAID.byteLength + instanceAID.byteLength + params.byteLength + 9);
+    let i = 0;
+
+    data[i++] = packageAID.byteLength;
+    data.set(packageAID, i);
+    i = i + packageAID.byteLength;
+
+    data[i++] = appletAID.byteLength;
+    data.set(appletAID, i);
+    i = i + packageAID.length;
+
+    data[i++] = instanceAID.byteLength;
+    data.set(instanceAID, i);
+    i = i + instanceAID.byteLength;
+
+    let privileges = new Uint8Array(0x00);
+    data[i++] = privileges.byteLength;
+    data.set(privileges, i);
+    i++;
+
+    let fullParams = new Uint8Array(2 + params.byteLength);
+    fullParams[0] = 0xc9;
+    fullParams[1] = params.byteLength;
+    fullParams.set(params, 2);
+
+    data[i++] = fullParams.byteLength;
+    data.set(fullParams, i);
+    i++;
+
+    data[i] = 0x00;
+
+    let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_INSTALL, GlobalPlatformConstants.INSTALL_FOR_INSTALL_P1, 0, data);
+    return this.secureChannel.send(cmd);
+  }
+
+  async installNDEFApplet(ndefRecord: Uint8Array): Promise<APDUResponse> {
+    return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, GlobalPlatformConstants.NDEF_AID, GlobalPlatformConstants.NDEF_INSTANCE_AID, ndefRecord);
+  }
+
+  async installKeycardApplet(): Promise<APDUResponse> {
+    return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, GlobalPlatformConstants.KEYCARD_AID, GlobalPlatformConstants.getKeycardInstanceAID(), new Uint8Array(0));
+  }
+
+  async installCashApplet(cashData = new Uint8Array(0)): Promise<APDUResponse> {
+    return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, GlobalPlatformConstants.CASH_AID, GlobalPlatformConstants.CASH_INSTANCE_AID, cashData);
   }
 
   async delete(aid: Uint8Array): Promise<APDUResponse> {
@@ -128,84 +207,5 @@ export class GlobalPlatformCommandset {
     (await this.deleteKeycardInstance()).checkSW(Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND);
     (await this.deleteCashInstance()).checkSW(Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND);
     (await this.deleteKeycardPackage()).checkSW(Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND);
-  }
-
-  async installForLoad(aid: Uint8Array, sdAid = new Uint8Array(0)): Promise<APDUResponse> {
-    let data = new Uint8Array(aid.byteLength + sdAid.byteLength + 5);
-    data[0] = aid.byteLength;
-    data.set(aid, 1);
-    data[aid.length] = sdAid.byteLength;
-    data.set(sdAid, aid.length + 1);
-
-    let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_INSTALL, GlobalPlatformConstants.INSTALL_FOR_LOAD_P1, 0, data);
-    return this.secureChannel.send(cmd);
-  }
-
-  async load(data: Uint8Array, count: number, hasMoreBlocks: boolean): Promise<APDUResponse> {
-    let p1 = hasMoreBlocks ? GlobalPlatformConstants.LOAD_P1_MORE_BLOCKS : GlobalPlatformConstants.LOAD_P1_LAST_BLOCK;
-    let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_LOAD, p1, count, data);
-    return this.secureChannel.send(cmd);
-  }
-
-  async loadKeycardPackage(cap: Uint8Array, cb: (loadedBlock: number, blockCount: number) => void): Promise<void> {
-    (await this.installForLoad(GlobalPlatformConstants.PACKAGE_AID)).checkOK();
-
-    let load = new Load(cap);
-
-    let block: Uint8Array;
-    let steps = load.blocksCount();
-
-    while ((block = load.nextDataBlock()) != null) {
-      (await this.load(block, (load.count - 1), load.hasMore())).checkOK();
-      cb(load.count, steps);
-    }
-  }
-
-  async installForInstall(packageAID: Uint8Array, appletAID: Uint8Array, instanceAID: Uint8Array, params: Uint8Array) : Promise<APDUResponse> {
-    let data = new Uint8Array(packageAID.byteLength + appletAID.byteLength + instanceAID.byteLength + params.byteLength + 9);
-    let i = 0;
-
-    data[i++] = packageAID.byteLength;
-    data.set(packageAID, i);
-    i = i + packageAID.byteLength;
-    
-    data[i++] = appletAID.byteLength;
-    data.set(appletAID, i);
-    i = i + packageAID.length;
-
-    data[i++] = instanceAID.byteLength;
-    data.set(instanceAID, i);
-    i = i + instanceAID.byteLength;
-
-    let privileges = new Uint8Array(0x00);
-    data[i++] = privileges.byteLength;
-    data.set(privileges, i);
-    i++;
-
-    let fullParams = new Uint8Array(2 + params.byteLength);
-    fullParams[0] = 0xc9;
-    fullParams[1] = params.byteLength;
-    fullParams.set(params, 2);
-  
-    data[i++] = fullParams.byteLength;
-    data.set(fullParams, i);
-    i++;
-
-    data[i] = 0x00;
-
-    let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_INSTALL, GlobalPlatformConstants.INSTALL_FOR_INSTALL_P1, 0, data);
-    return this.secureChannel.send(cmd);
-  }
-
-  async installNDEFApplet(ndefRecord: Uint8Array) : Promise<APDUResponse> {
-    return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, GlobalPlatformConstants.NDEF_AID, GlobalPlatformConstants.NDEF_INSTANCE_AID, ndefRecord);
-  }
-
-  async installKeycardApplet() : Promise<APDUResponse> {
-    return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, GlobalPlatformConstants.KEYCARD_AID, GlobalPlatformConstants.getKeycardInstanceAID(), new Uint8Array(0));
-  }
-
-  async installCashApplet(cashData = new Uint8Array(0)) : Promise<APDUResponse> {
-    return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, GlobalPlatformConstants.CASH_AID, GlobalPlatformConstants.CASH_INSTANCE_AID, cashData);
   }
 }

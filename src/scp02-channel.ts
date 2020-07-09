@@ -7,6 +7,7 @@ import { APDUException } from "./apdu-exception";
 import { Constants } from "./constants"
 import { GlobalPlatformCrypto } from "./global-platform-crypto";
 import { APDUCommand } from "./apdu-command";
+import { CryptoUtils } from "./crypto-utils";
 
 const DERIVATION_PURPOSE_ENC = new Uint8Array([0x01, 0x82]);
 const DERIVATION_PURPOSE_MAC = new Uint8Array([0x01, 0x01]);
@@ -26,7 +27,17 @@ export class SCP02Channel {
     return this.apduChannel.send(wrappedAPDUCommand);
   }
 
-  static verifyChallenge(hostChallenge: Uint8Array, scp02Keys: SCP02Keys, apduResp: APDUResponse) : SCP02Session {
+  public static verifyCryptogram(key: Uint8Array, hostChallenge: Uint8Array, cardChallenge: Uint8Array, cardCryptogram: Uint8Array) : boolean {
+    let data = new Uint8Array(hostChallenge.byteLength + cardChallenge.byteLength);
+    data.set(hostChallenge, 0);
+    data.set(cardChallenge, hostChallenge.byteLength);
+
+    let calculated = GlobalPlatformCrypto.mac3des(key, GlobalPlatformCrypto.appendDESPadding(data), new Uint8Array(8));
+
+    return CryptoUtils.Uint8ArrayEqual(calculated, cardCryptogram);
+  }
+
+  public static verifyChallenge(hostChallenge: Uint8Array, scp02Keys: SCP02Keys, apduResp: APDUResponse) : SCP02Session {
     if (apduResp.sw == Constants.SW_SECURITY_CONDITION_NOT_SATISFIED) {
       throw new APDUException("Error: Security condition not satisfied", apduResp.sw);
     }
@@ -51,10 +62,10 @@ export class SCP02Channel {
 
     let sessionKeys = new SCP02Keys(sessionEncKey, sessionMacKey, sessionDekKey);
 
-    let verified = GlobalPlatformCrypto.verifyCryptogram(sessionKeys.encKey, hostChallenge, cardChallenge, cardCryptogram);
+    let verified = SCP02Channel.verifyCryptogram(sessionKeys.encKey, hostChallenge, cardChallenge, cardCryptogram);
 
     if (!verified) {
-      throw new APDUException("Error: Error verifying card cryptogram.");
+      throw new APDUException("Error: Error verifying card cryptogram.", Constants.SW_SECURITY_CONDITION_NOT_SATISFIED);
     }
 
     return new SCP02Session(sessionKeys, cardChallenge);
