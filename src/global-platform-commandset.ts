@@ -121,8 +121,8 @@ export class GlobalPlatformCommandset {
     let data = new Uint8Array(aid.byteLength + sdAid.byteLength + 5);
     data[0] = aid.byteLength;
     data.set(aid, 1);
-    data[aid.length] = sdAid.byteLength;
-    data.set(sdAid, aid.length + 1);
+    data[aid.length + 1] = sdAid.byteLength;
+    data.set(sdAid, aid.length + 2);
 
     let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_INSTALL, GlobalPlatformConstants.INSTALL_FOR_LOAD_P1, 0, data);
     return this.secureChannel.send(cmd);
@@ -134,29 +134,24 @@ export class GlobalPlatformCommandset {
 
     data[i++] = packageAID.byteLength;
     data.set(packageAID, i);
-    i = i + packageAID.byteLength;
+    i += packageAID.byteLength;
 
     data[i++] = appletAID.byteLength;
     data.set(appletAID, i);
-    i = i + packageAID.length;
+    i += appletAID.byteLength;
 
     data[i++] = instanceAID.byteLength;
     data.set(instanceAID, i);
-    i = i + instanceAID.byteLength;
+    i += instanceAID.byteLength;
 
-    let privileges = new Uint8Array(0x00);
-    data[i++] = privileges.byteLength;
-    data.set(privileges, i);
-    i++;
+    data[i++] = 1;
+    data[i++] = 0;
 
-    let fullParams = new Uint8Array(2 + params.byteLength);
-    fullParams[0] = 0xc9;
-    fullParams[1] = params.byteLength;
-    fullParams.set(params, 2);
-
-    data[i++] = fullParams.byteLength;
-    data.set(fullParams, i);
-    i++;
+    data[i++] = 2 + params.byteLength;
+    data[i++] = 0xc9;
+    data[i++] = params.byteLength;
+    data.set(params, i);
+    i += params.byteLength;
 
     data[i] = 0x00;
 
@@ -169,7 +164,7 @@ export class GlobalPlatformCommandset {
   }
 
   async installKeycardApplet(): Promise<APDUResponse> {
-    return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, GlobalPlatformConstants.KEYCARD_AID, GlobalPlatformConstants.getKeycardInstanceAID(), new Uint8Array(0));
+    return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, GlobalPlatformConstants.KEYCARD_AID, GlobalPlatformConstants.KEYCARD_INSTANCE_ID, new Uint8Array(0));
   }
 
   async installCashApplet(cashData = new Uint8Array(0)): Promise<APDUResponse> {
@@ -187,7 +182,7 @@ export class GlobalPlatformCommandset {
   }
 
   async deleteKeycardInstance(): Promise<APDUResponse> {
-    return this.delete(GlobalPlatformConstants.getKeycardInstanceAID());
+    return this.delete(GlobalPlatformConstants.KEYCARD_INSTANCE_ID);
   }
 
   async deleteCashInstance(): Promise<APDUResponse> {
@@ -203,9 +198,9 @@ export class GlobalPlatformCommandset {
   }
 
   async deleteKeycardInstancesAndPackage(): Promise<void> {
-    (await this.deleteNDEFInstance()).checkSW(Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND);
-    (await this.deleteKeycardInstance()).checkSW(Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND);
-    (await this.deleteCashInstance()).checkSW(Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND);
-    (await this.deleteKeycardPackage()).checkSW(Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND);
+    (await this.deleteNDEFInstance()).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
+    (await this.deleteKeycardInstance()).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
+    (await this.deleteCashInstance()).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
+    (await this.deleteKeycardPackage()).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
   }
 }

@@ -4,6 +4,7 @@ import { GlobalPlatform } from "../src/global-platform"
 const pcsclite = require("@pokusew/pcsclite");
 const pcsc = pcsclite();
 const process = require("process");
+const fs = require("fs");
 
 function hx(arr: Uint8Array) : string {
   return Buffer.from(arr).toString('hex');
@@ -29,6 +30,7 @@ function createGlobalPlatformChannel(): any {
           }
 
           try {
+            let cap = fs.readFileSync(process.argv[2]);
             let channel = new Keycard.PCSCCardChannel(reader, protocol);
             let cmdSet = new GlobalPlatform.GlobalPlatformCommandset(channel);
             console.log("Selecting card");
@@ -36,8 +38,16 @@ function createGlobalPlatformChannel(): any {
             console.log("Opening Global Platform Secure Channel");
             await cmdSet.openSecureChannel();
             console.log("Secure Channel opened");
-            (await cmdSet.deleteNDEFInstance()).checkSW([0x9000, 0x6a88]);
-            console.log("NDEF Instance deleted");
+            console.log("Deleting the old instances and package (if present)");
+            await cmdSet.deleteKeycardInstancesAndPackage();
+            console.log("Loading the new package");
+            (await cmdSet.loadKeycardPackage(cap, (loadedBlock, blockCount) => console.log("Loaded block " + loadedBlock + "/" + blockCount)));
+            console.log("Installing the Keycard Applet");
+            (await cmdSet.installKeycardApplet()).checkOK();
+            console.log("Installing the NDEF Applet");
+            (await cmdSet.installNDEFApplet(new Uint8Array(0))).checkOK();
+            console.log("Installing the Cash Applet");
+            (await cmdSet.installCashApplet()).checkOK();
             process.exit(0);
           } catch (err) {
             console.log(err);

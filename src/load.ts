@@ -1,10 +1,11 @@
 const JSZip = require("jszip");
-let zip = new JSZip();
 
 const BLOCK_SIZE = 247;
 const CLA = 0x80;
 const INS = 0xe8;
 const fileNames = ["Header.cap", "Directory.cap", "Import.cap", "Applet.cap", "Class.cap", "Method.cap", "StaticField.cap", "Export.cap", "ConstantPool.cap", "RefLocation.cap"];
+
+let zip = new JSZip();
 
 export class Load {
   offset: number;
@@ -43,10 +44,10 @@ export class Load {
     result[2] = length >> 8;
     result[3] = length;
   
-    for(let file in fileNames) {
-      if (appletObj[file]) {
-        result.set(appletObj[file], offset);
-        offset += appletObj[file].byteLength;
+    for(let i = 0; i < fileNames.length; i++) {
+      if (appletObj[fileNames[i]]) {
+        result.set(appletObj[fileNames[i]], offset);
+        offset += appletObj[fileNames[i]].byteLength;
       }
     }
 
@@ -78,5 +79,4 @@ export class Load {
   hasMore() : boolean {
     return this.offset < this.fullData.byteLength;
   }
-
 }
