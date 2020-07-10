@@ -1,11 +1,6 @@
 import {APDUException, WrongPINException} from "./apdu-exception"
+import { Constants } from "./constants";
 
-const SW_OK = 0x9000;
-const SW_SECURITY_CONDITION_NOT_SATISFIED = 0x6982;
-const SW_AUTHENTICATION_METHOD_BLOCKED = 0x6983;
-const SW_CARD_LOCKED = 0x6283;
-const SW_REFERENCED_DATA_NOT_FOUND = 0x6A88;
-const SW_CONDITIONS_OF_USE_NOT_SATISFIED = 0x6985; // applet may be already installed
 const SW_WRONG_PIN_MASK = 0x63C0;
 
 export class APDUResponse {
@@ -34,7 +29,7 @@ export class APDUResponse {
   }
 
   isOK() : boolean {
-    return this.sw == SW_OK;
+    return this.sw == Constants.SW_OK;
   }
 
   checkSW(codes: number|number[], message = null) : APDUResponse {
@@ -52,9 +47,9 @@ export class APDUResponse {
       throw new APDUException(message, this.sw);
     } else {
       switch (this.sw) {
-        case SW_SECURITY_CONDITION_NOT_SATISFIED:
+        case Constants.SW_SECURITY_CONDITION_NOT_SATISFIED:
           throw new APDUException("Security condition not satisfied", this.sw);
-        case SW_AUTHENTICATION_METHOD_BLOCKED:
+        case Constants.SW_AUTHENTICATION_METHOD_BLOCKED:
           throw new APDUException("Authentication method blocked", this.sw);
         default:
           throw new APDUException("Unexpected error SW", this.sw);
@@ -63,7 +58,7 @@ export class APDUResponse {
   }
 
   checkOK(message = null) : APDUResponse {
-    return this.checkSW(SW_OK, message);
+    return this.checkSW(Constants.SW_OK, message);
   }
 
   checkAuthOK() : APDUResponse {
