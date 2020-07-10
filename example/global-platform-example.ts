@@ -1,5 +1,5 @@
 import { Keycard } from "../src/index"
-import { KeycardGlobalPlatform } from "../src/keycard-global-platform"
+import { GlobalPlatform } from "../src/global-platform"
 
 const pcsclite = require("@pokusew/pcsclite");
 const pcsc = pcsclite();
@@ -30,7 +30,7 @@ function createGlobalPlatformChannel(): any {
 
           try {
             let channel = new Keycard.PCSCCardChannel(reader, protocol);
-            let cmdSet = new KeycardGlobalPlatform.GlobalPlatformCommandset(channel);
+            let cmdSet = new GlobalPlatform.GlobalPlatformCommandset(channel);
             console.log("Selecting card");
             (await cmdSet.select()).checkOK();
             console.log("Opening Global Platform Secure Channel");

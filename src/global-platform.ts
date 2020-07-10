@@ -7,7 +7,7 @@ import { SCP02Session } from "./scp02-session";
 import { SCP02Wrapper } from "./scp02-wrapper";
 import { Load } from "./load";
 
-export let KeycardGlobalPlatform = {
+export let GlobalPlatform = {
   GlobalPlatformCommandset: GlobalPlatformCommandset,
   GlobalPlatformCrypto: GlobalPlatformCrypto,
   GlobalPlatformConstants: GlobalPlatformConstants,
@@ -18,5 +18,5 @@ export let KeycardGlobalPlatform = {
   Load: Load
 }
 
-export default KeycardGlobalPlatform;
-Object.assign(module.exports, KeycardGlobalPlatform);
+export default GlobalPlatform;
+Object.assign(module.exports, GlobalPlatform);

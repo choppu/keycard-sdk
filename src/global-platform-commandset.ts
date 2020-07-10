@@ -106,7 +106,7 @@ export class GlobalPlatformCommandset {
   async loadKeycardPackage(cap: Uint8Array, cb: (loadedBlock: number, blockCount: number) => void): Promise<void> {
     (await this.installForLoad(GlobalPlatformConstants.PACKAGE_AID)).checkOK();
 
-    let load = new Load(cap);
+    let load = await Load.new(cap);
 
     let block: Uint8Array;
     let steps = load.blocksCount();
