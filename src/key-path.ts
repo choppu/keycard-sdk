@@ -22,7 +22,7 @@ export class KeyPath {
     return (sign | parseInt(num));
   }
 
-  writeComponent(component: number, i: number) {
+  writeComponent(component: number, i: number) : void {
     let off = i * 4;
 
     this.data[off] = component >> 24;
