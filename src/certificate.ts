@@ -1,7 +1,7 @@
 import { BERTLV } from "./ber-tlv";
+import { BIP32KeyPair } from "./bip32key";
 import { Constants } from "./constants";
 import { CryptoUtils } from "./crypto-utils";
-import { KeyPair } from "./keypair";
 import { RecoverableSignature } from "./recoverable-signature";
 
 const CryptoJS = require('crypto-js');
@@ -18,13 +18,13 @@ export class Certificate extends RecoverableSignature {
     super(publicKey, compressed, r, s, recId);
   }
 
-  generateIdentKeyPair(): KeyPair {
+  generateIdentKeyPair(): BIP32KeyPair {
     let privKey = CryptoUtils.generateECPrivateKey();
     let publicKey = secp256k1.publicKeyCreate(privKey, false);
-    return new KeyPair(privKey, publicKey);
+    return new BIP32KeyPair(privKey, null, publicKey);
   }
 
-  createCertificate(caPair: KeyPair, identKeys: KeyPair): Certificate {
+  createCertificate(caPair: BIP32KeyPair, identKeys: BIP32KeyPair): Certificate {
     let pub = secp256k1.publicKeyConvert(identKeys.publicKey, true, new Uint8Array(33));
     let hash = CryptoJS.SHA256(pub);
     let signed = secp256k1.ecdsaSign(hash, caPair.privateKey);
@@ -41,7 +41,7 @@ export class Certificate extends RecoverableSignature {
     return cert;
   }
 
-  generateNewCertificate(caPair: KeyPair): Certificate {
+  generateNewCertificate(caPair: BIP32KeyPair): Certificate {
     return this.createCertificate(caPair, this.generateIdentKeyPair());
   }
 
