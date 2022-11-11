@@ -11,7 +11,7 @@ export class RecoverableSignature {
   s: Uint8Array;
   compressed: boolean;
 
-  toUInt(signedInt: Uint8Array): Uint8Array {
+  public static toUInt(signedInt: Uint8Array): Uint8Array {
     return (signedInt[0] == 0) ? signedInt.subarray(1) : signedInt;
   }
 
@@ -35,8 +35,8 @@ export class RecoverableSignature {
     tlv.enterConstructed(Constants.TLV_SIGNATURE_TEMPLATE);
     this.publicKey = tlv.readPrimitive(Constants.TLV_PUB_KEY);
     tlv.enterConstructed(Constants.TLV_ECDSA_TEMPLATE);
-    this.r = this.toUInt(tlv.readPrimitive(Constants.TLV_INT));
-    this.s = this.toUInt(tlv.readPrimitive(Constants.TLV_INT));
+    this.r = RecoverableSignature.toUInt(tlv.readPrimitive(Constants.TLV_INT));
+    this.s = RecoverableSignature.toUInt(tlv.readPrimitive(Constants.TLV_INT));
     this.compressed = false;
 
     this.calculateRecID(hash);

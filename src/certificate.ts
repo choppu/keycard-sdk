@@ -18,31 +18,31 @@ export class Certificate extends RecoverableSignature {
     super(publicKey, compressed, r, s, recId);
   }
 
-  generateIdentKeyPair(): BIP32KeyPair {
+  public static generateIdentKeyPair(): BIP32KeyPair {
     let privKey = CryptoUtils.generateECPrivateKey();
     let publicKey = secp256k1.publicKeyCreate(privKey, false);
     return new BIP32KeyPair(privKey, null, publicKey);
   }
 
-  createCertificate(caPair: BIP32KeyPair, identKeys: BIP32KeyPair): Certificate {
+  public static createCertificate(caPair: BIP32KeyPair, identKeys: BIP32KeyPair): Certificate {
     let pub = secp256k1.publicKeyConvert(identKeys.publicKey, true, new Uint8Array(33));
     let hash = CryptoJS.SHA256(pub);
     let signed = secp256k1.ecdsaSign(hash, caPair.privateKey);
 
     let tlv = new BERTLV(signed);
     tlv.enterConstructed(Constants.TLV_ECDSA_TEMPLATE);
-    let r = this.toUInt(tlv.readPrimitive(Constants.TLV_INT));
-    let s = this.toUInt(tlv.readPrimitive(Constants.TLV_INT));
+    let r = Certificate.toUInt(tlv.readPrimitive(Constants.TLV_INT));
+    let s = Certificate.toUInt(tlv.readPrimitive(Constants.TLV_INT));
     let cert = new Certificate(secp256k1.publicKeyConvert(caPair.publicKey, true, new Uint8Array(33)), true, r, s, -1);
     cert.calculateRecID(hash);
-    cert.identPriv = this.toUInt(identKeys.privateKey);
+    cert.identPriv = Certificate.toUInt(identKeys.privateKey);
     cert.identPub = pub;
 
     return cert;
   }
 
-  generateNewCertificate(caPair: BIP32KeyPair): Certificate {
-    return this.createCertificate(caPair, this.generateIdentKeyPair());
+  public static generateNewCertificate(caPair: BIP32KeyPair): Certificate {
+    return Certificate.createCertificate(caPair, Certificate.generateIdentKeyPair());
   }
 
   fromTLV(certData: Uint8Array): Certificate {
