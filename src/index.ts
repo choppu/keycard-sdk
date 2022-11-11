@@ -16,7 +16,6 @@ import { CryptoUtils } from "./crypto-utils"
 import { Constants } from "./constants"
 import { Certificate } from "./certificate"
 import { Identifiers } from "./identifiers"
-import { KeyPair } from "./keypair"
 import { IdentComandset } from "./ident-comandset"
 
 
@@ -29,7 +28,6 @@ export let Keycard = {
   APDUCommand: APDUCommand,
   BERTLV: BERTLV,
   BIP32KeyPair: BIP32KeyPair,
-  KeyPair: KeyPair,
   CashApplicationInfo: CashApplicationInfo,
   CashCommandset: CashCommandset,
   KeyPath: KeyPath,
