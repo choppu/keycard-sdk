@@ -27,7 +27,7 @@ export class Certificate extends RecoverableSignature {
 
   public static createCertificate(caPair: BIP32KeyPair, identKeys: BIP32KeyPair): Certificate {
     let pub = secp256k1.publicKeyConvert(identKeys.publicKey, true, new Uint8Array(33));
-    let hash = CryptoUtils.wordArrayToByteArray(CryptoJS.SHA256(pub));
+    let hash = CryptoUtils.wordArrayToByteArray(CryptoJS.SHA256(pub.toString()));
     let signed = secp256k1.ecdsaSign(hash, caPair.privateKey);
     let r = signed.signature.subarray(0, 32);
     let s = signed.signature.subarray(32, 64);
