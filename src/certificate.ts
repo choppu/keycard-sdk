@@ -31,7 +31,7 @@ export class Certificate extends RecoverableSignature {
     let signed = secp256k1.ecdsaSign(hash, caPair.privateKey);
     let r = signed.signature.subarray(0, 32);
     let s = signed.signature.subarray(32, 64);
-    let cert = new Certificate(secp256k1.publicKeyConvert(caPair.publicKey, true, new Uint8Array(33)), true, r, s, signed.recid);
+    let cert = new Certificate(CryptoUtils.compressPublicKey(caPair.publicKey), true, r, s, signed.recid);
     cert.identPriv = Certificate.toUInt(identKeys.privateKey);
     cert.identPub = pub;
 

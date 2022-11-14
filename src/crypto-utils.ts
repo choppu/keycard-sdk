@@ -60,4 +60,8 @@ export namespace CryptoUtils {
   export function checkAllDigits(value: string) : boolean {
     return value.split("").every((c) => '0123456789'.includes(c));
   }
+
+  export function compressPublicKey(pubkey: Uint8Array) : Uint8Array {
+    return secp256k1.publicKeyConvert(pubkey, true, new Uint8Array(33));
+  }
 }
