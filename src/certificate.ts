@@ -3,6 +3,7 @@ import { BIP32KeyPair } from "./bip32key";
 import { Constants } from "./constants";
 import { CryptoUtils } from "./crypto-utils";
 import { RecoverableSignature } from "./recoverable-signature";
+import { error } from "console";
 
 const CryptoJS = require('crypto-js');
 const secp256k1 = require('secp256k1');
@@ -21,20 +22,16 @@ export class Certificate extends RecoverableSignature {
   public static generateIdentKeyPair(): BIP32KeyPair {
     let privKey = CryptoUtils.generateECPrivateKey();
     let publicKey = secp256k1.publicKeyCreate(privKey, false);
-    return new BIP32KeyPair(privKey, null, publicKey);
+    return new BIP32KeyPair(privKey, new Uint8Array(0), publicKey);
   }
 
   public static createCertificate(caPair: BIP32KeyPair, identKeys: BIP32KeyPair): Certificate {
     let pub = secp256k1.publicKeyConvert(identKeys.publicKey, true, new Uint8Array(33));
-    let hash = CryptoJS.SHA256(pub);
+    let hash = CryptoUtils.wordArrayToByteArray(CryptoJS.SHA256(pub));
     let signed = secp256k1.ecdsaSign(hash, caPair.privateKey);
-
-    let tlv = new BERTLV(signed);
-    tlv.enterConstructed(Constants.TLV_ECDSA_TEMPLATE);
-    let r = Certificate.toUInt(tlv.readPrimitive(Constants.TLV_INT));
-    let s = Certificate.toUInt(tlv.readPrimitive(Constants.TLV_INT));
-    let cert = new Certificate(secp256k1.publicKeyConvert(caPair.publicKey, true, new Uint8Array(33)), true, r, s, -1);
-    cert.calculateRecID(hash);
+    let r = signed.signature.subarray(0, 32);
+    let s = signed.signature.subarray(32, 64);
+    let cert = new Certificate(secp256k1.publicKeyConvert(caPair.publicKey, true, new Uint8Array(33)), true, r, s, signed.recid);
     cert.identPriv = Certificate.toUInt(identKeys.privateKey);
     cert.identPub = pub;
 
@@ -51,7 +48,7 @@ export class Certificate extends RecoverableSignature {
       let s = certData.subarray(65, 97);
       let recId = certData[97];
 
-      let hash = CryptoJS.SHA256(pubKey);
+      let hash = CryptoUtils.wordArrayToByteArray(CryptoJS.SHA256(pubKey));
       let caPub = this.recoverFromSignature(recId, hash, r, s, true);
 
       let cert = new Certificate(caPub, true, r, s, recId);
