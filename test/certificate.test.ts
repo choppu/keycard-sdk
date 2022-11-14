@@ -11,4 +11,5 @@ const certificate = Certificate.generateNewCertificate(caKeyPair);
 
 test('Certificate constructor function', () => {
   expect(certificate instanceof Certificate).toBe(true);
+  expect(certificate.toStoreData() instanceof Uint8Array).toBe(true);
 });

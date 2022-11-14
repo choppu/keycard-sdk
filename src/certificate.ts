@@ -80,13 +80,17 @@ export class Certificate extends RecoverableSignature {
 
     let storeDataLength = this.identPub.byteLength + this.r.byteLength + this.s.byteLength + this.identPriv.byteLength + 1;
     let storeData = new Uint8Array(storeDataLength);
+    let off = 0;
 
-    storeData.set(this.identPub, 0);
-    storeData.set(this.r, this.identPub.byteLength);
-    storeData.set(this.s, this.r.byteLength);
-    storeData[this.s.byteLength] = this.recId;
-    storeData.set(this.identPriv, this.s.byteLength + 1);
-
+    storeData.set(this.identPub, off);
+    off += this.identPub.byteLength;
+    storeData.set(this.r, off);
+    off += this.r.byteLength;
+    storeData.set(this.s, off);
+    off += this.s.byteLength;
+    storeData[off] = this.recId;
+    off += 1;
+    storeData.set(this.identPriv, off);
     return storeData;
   }
 
