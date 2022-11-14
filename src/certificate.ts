@@ -3,7 +3,6 @@ import { BIP32KeyPair } from "./bip32key";
 import { Constants } from "./constants";
 import { CryptoUtils } from "./crypto-utils";
 import { RecoverableSignature } from "./recoverable-signature";
-import { error } from "console";
 
 const CryptoJS = require('crypto-js');
 const secp256k1 = require('secp256k1');
@@ -27,7 +26,8 @@ export class Certificate extends RecoverableSignature {
 
   public static createCertificate(caPair: BIP32KeyPair, identKeys: BIP32KeyPair): Certificate {
     let pub = secp256k1.publicKeyConvert(identKeys.publicKey, true, new Uint8Array(33));
-    let hash = CryptoUtils.wordArrayToByteArray(CryptoJS.SHA256(pub.toString()));
+    let mess = CryptoJS.lib.WordArray.create(pub);
+    let hash = CryptoUtils.wordArrayToByteArray(CryptoJS.SHA256(mess));
     let signed = secp256k1.ecdsaSign(hash, caPair.privateKey);
     let r = signed.signature.subarray(0, 32);
     let s = signed.signature.subarray(32, 64);
