@@ -1,7 +1,7 @@
 import { GlobalPlatformCommandset } from "./global-platform-commandset";
 import { GlobalPlatformCrypto } from "./global-platform-crypto";
 import { GlobalPlatformConstants } from "./global-platform-constants";
-import { SCP02Channel } from "./SCP02-channel";
+import { SCP02Channel } from "./scp02-channel";
 import { SCP02Keys } from "./scp02-keys";
 import { SCP02Session } from "./scp02-session";
 import { SCP02Wrapper } from "./scp02-wrapper";

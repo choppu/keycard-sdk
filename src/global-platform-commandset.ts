@@ -1,5 +1,5 @@
 import { CardChannel } from "./card-channel";
-import { SCP02Channel } from "./SCP02-channel";
+import { SCP02Channel } from "./scp02-channel";
 import { SCP02Keys } from "./scp02-keys";
 import { APDUResponse } from "./apdu-response";
 import { APDUCommand } from "./apdu-command";
