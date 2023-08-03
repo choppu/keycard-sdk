@@ -2,7 +2,7 @@ import { MnemonicEnglishDictionary } from "./mnemonic-english-dictionary"
 import { CryptoUtils } from "./crypto-utils"
 import { BIP32KeyPair } from "./bip32key";
 
-const WORDLIST_SIZE = 2048; 
+const WORDLIST_SIZE = 2048;
 const CryptoJS = require("crypto-js")
 
 export class Mnemonic {

@@ -1,5 +1,5 @@
 import { CardChannel } from "./card-channel";
-import { SCP02Channel } from "./SCP02-channel";
+import { SCP02Channel } from "./scp02-channel";
 import { SCP02Keys } from "./scp02-keys";
 import { APDUResponse } from "./apdu-response";
 import { APDUCommand } from "./apdu-command";
@@ -10,6 +10,7 @@ import { GlobalPlatformCrypto } from "./global-platform-crypto";
 import { CryptoUtils } from "./crypto-utils";
 import { Constants } from "./constants";
 import { Load } from "./load";
+import { Identifiers } from "./identifiers";
 
 const gpDefaultKey = new Uint8Array([0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f]);
 const gpDefaultKeys = new SCP02Keys(gpDefaultKey, gpDefaultKey, gpDefaultKey);
@@ -159,12 +160,16 @@ export class GlobalPlatformCommandset {
     return this.secureChannel.send(cmd);
   }
 
-  async installNDEFApplet(ndefRecord: Uint8Array): Promise<APDUResponse> {
+  async installNDEFApplet(ndefRecord: Uint8Array) : Promise<APDUResponse> {
     return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, GlobalPlatformConstants.NDEF_AID, GlobalPlatformConstants.NDEF_INSTANCE_AID, ndefRecord);
   }
 
   async installKeycardApplet(): Promise<APDUResponse> {
     return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, GlobalPlatformConstants.KEYCARD_AID, GlobalPlatformConstants.KEYCARD_INSTANCE_ID, new Uint8Array(0));
+  }
+
+  async installIdentApplet(): Promise<APDUResponse> {
+    return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, Identifiers.IDENT_AID, Identifiers.IDENT_INSTANCE_AID, new Uint8Array(0));
   }
 
   async installCashApplet(cashData = new Uint8Array(0)): Promise<APDUResponse> {
@@ -181,26 +186,31 @@ export class GlobalPlatformCommandset {
     return this.secureChannel.send(cmd);
   }
 
-  async deleteKeycardInstance(): Promise<APDUResponse> {
+  async deleteKeycardInstance() : Promise<APDUResponse> {
     return this.delete(GlobalPlatformConstants.KEYCARD_INSTANCE_ID);
   }
 
-  async deleteCashInstance(): Promise<APDUResponse> {
+  async deleteCashInstance() : Promise<APDUResponse> {
     return this.delete(GlobalPlatformConstants.CASH_INSTANCE_AID);
   }
 
-  async deleteNDEFInstance(): Promise<APDUResponse> {
+  async deleteNDEFInstance() : Promise<APDUResponse> {
     return this.delete(GlobalPlatformConstants.NDEF_INSTANCE_AID);
   }
 
-  async deleteKeycardPackage(): Promise<APDUResponse> {
+  async deleteIdentInstance() : Promise<APDUResponse> {
+    return this.delete(Identifiers.IDENT_INSTANCE_AID);
+  }
+
+  async deleteKeycardPackage() : Promise<APDUResponse> {
     return this.delete(GlobalPlatformConstants.PACKAGE_AID);
   }
 
-  async deleteKeycardInstancesAndPackage(): Promise<void> {
+  async deleteKeycardInstancesAndPackage() : Promise<void> {
     (await this.deleteNDEFInstance()).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
     (await this.deleteKeycardInstance()).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
     (await this.deleteCashInstance()).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
+    (await this.deleteIdentInstance()).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
     (await this.deleteKeycardPackage()).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
   }
 }

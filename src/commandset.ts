@@ -14,6 +14,7 @@ const CryptoJS = require("crypto-js");
 const INS_INIT = 0xfe;
 const INS_GET_STATUS = 0xf2;
 const INS_SET_NDEF = 0xf3;
+const INS_IDENTIFY_CARD = 0x14;
 const INS_VERIFY_PIN = 0x20;
 const INS_CHANGE_PIN = 0x21;
 const INS_UNBLOCK_PIN = 0x22;
@@ -25,7 +26,6 @@ const INS_GENERATE_KEY = 0xd4;
 const INS_SET_PINLESS_PATH = 0xc1;
 const INS_EXPORT_KEY = 0xc2;
 const INS_GET_DATA = 0xca;
-const INS_STORE_DATA = 0xe2;
 
 const CHANGE_PIN_P1_USER_PIN = 0x00;
 const CHANGE_PIN_P1_PUK = 0x01;
@@ -88,7 +88,7 @@ export class Commandset {
       }
     }
 
-    return resp;  
+    return resp;
   }
 
   async autoOpenSecureChannel() : Promise<void> {
@@ -109,7 +109,7 @@ export class Commandset {
     if (typeof pairingData === "string") {
       pairingData = this.pairingPasswordToSecret(pairingData);
     }
-    
+
     return this.secureChannel.autoPair(this.apduChannel, pairingData);
   }
 
@@ -135,6 +135,11 @@ export class Commandset {
 
   async unpairOthers() : Promise<void> {
     return this.secureChannel.unpairOthers(this.apduChannel);
+  }
+
+  async identifyCard(challenge: Uint8Array) : Promise<APDUResponse> {
+    let identifyCard = this.secureChannel.protectedCommand(0x80, INS_IDENTIFY_CARD, 0, 0, challenge);
+    return this.secureChannel.transmit(this.apduChannel, identifyCard);
   }
 
   async getStatus(info: number) : Promise<APDUResponse> {
@@ -234,13 +239,13 @@ export class Commandset {
     source = (source == undefined) ? Constants.DERIVE_SOURCE.deriveP1SourceMaster : source;
 
     let deriveKey = this.secureChannel.protectedCommand(0x80, INS_DERIVE_KEY, source, 0x00, data);
-    return this.secureChannel.transmit(this.apduChannel, deriveKey);  
+    return this.secureChannel.transmit(this.apduChannel, deriveKey);
   }
 
   async setPinlessPath(data: string | Uint8Array) : Promise<APDUResponse> {
     if (typeof data === "string") {
       let keyPath = new KeyPath(data);
-      
+
       if (keyPath.source != Constants.DERIVE_SOURCE.deriveP1SourceMaster) {
         throw new Error("Error: Only absolute paths can be set as PINLESS path");
       } else {
@@ -251,7 +256,7 @@ export class Commandset {
     let setPinlessPath = this.secureChannel.protectedCommand(0x80, INS_SET_PINLESS_PATH, 0x00, 0x00, data);
     return this.secureChannel.transmit(this.apduChannel, setPinlessPath);
   }
-  
+
   async resetPinlessPath() : Promise<APDUResponse> {
     return this.setPinlessPath(new Uint8Array(0));
   }
@@ -282,7 +287,7 @@ export class Commandset {
   }
 
   async storeData(data: Uint8Array, dataType: number) : Promise<APDUResponse> {
-    let storeData = this.secureChannel.protectedCommand(0x80, INS_STORE_DATA, dataType, 0, data);
+    let storeData = this.secureChannel.protectedCommand(0x80, Constants.INS_STORE_DATA, dataType, 0, data);
     return this.secureChannel.transmit(this.apduChannel, storeData);
   }
 
@@ -307,7 +312,7 @@ export class Commandset {
     if (typeof sharedSecret === "string") {
       sharedSecret = this.pairingPasswordToSecret(sharedSecret);
     }
-    
+
     let pinByteArr = CryptoUtils.stringToUint8Array(pin);
     let pukByteArr = CryptoUtils.stringToUint8Array(puk);
     let initData = new Uint8Array(pinByteArr.byteLength + pukByteArr.byteLength + sharedSecret.byteLength);
@@ -315,7 +320,7 @@ export class Commandset {
     initData.set(pinByteArr, 0);
     initData.set(pukByteArr, pinByteArr.byteLength);
     initData.set(sharedSecret, pinByteArr.byteLength + pukByteArr.byteLength);
-    
+
     let init = new APDUCommand(0x80, INS_INIT, 0, 0, this.secureChannel.oneShotEncrypt(initData));
     return this.apduChannel.send(init);
   }

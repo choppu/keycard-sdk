@@ -14,10 +14,14 @@ import { RecoverableSignature } from "./recoverable-signature"
 import { PCSCCardChannel } from "./pcsc-card-channel"
 import { CryptoUtils } from "./crypto-utils"
 import { Constants } from "./constants"
+import { Certificate } from "./certificate"
+import { Identifiers } from "./identifiers"
+import { IdentComandset } from "./ident-comandset"
 
 
 export let Keycard = {
   Commandset: Commandset,
+  IdentComandset: IdentComandset,
   Pairing: Pairing,
   ApplicationInfo: ApplicationInfo,
   ApplicationStatus: ApplicationStatus,
@@ -29,10 +33,12 @@ export let Keycard = {
   KeyPath: KeyPath,
   Mnemonic: Mnemonic,
   RecoverableSignature: RecoverableSignature,
+  Certificate: Certificate,
   PCSCCardChannel: PCSCCardChannel,
   Ethereum: Ethereum,
   CryptoUtils: CryptoUtils,
-  Constants: Constants
+  Constants: Constants,
+  Identifiers: Identifiers
 }
 
 export default Keycard;

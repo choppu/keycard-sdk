@@ -71,4 +71,8 @@ export class BERTLV {
       throw new Error("Expected tag: 0x" + expected.toString(16) + ", received: 0x" + actual.toString(16));
     }
   }
+
+  peekUnread() : Uint8Array {
+    return this.buffer.subarray(this.position);
+  }
 }
