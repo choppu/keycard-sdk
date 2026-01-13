@@ -3,38 +3,39 @@ import { BIP32KeyPair } from "./bip32key";
 import { Constants } from "./constants";
 import { CryptoUtils } from "./crypto-utils";
 import { RecoverableSignature } from "./recoverable-signature";
-
-const CryptoJS = require('crypto-js');
-const secp256k1 = require('secp256k1');
-
+import * as secp from '@noble/secp256k1';
+import {default  as CryptoJS} from "crypto-js"
+import { sha256 } from '@noble/hashes/sha2'
+import { hmac } from '@noble/hashes/hmac';
+import { RecoverableSignatureProps } from "./types/recoverable-signature-types";
 
 const TLV_CERT = 0x8a;
 
+secp.hashes.sha256 = sha256;
+secp.hashes.hmacSha256 = (key, msg) => hmac(sha256, key, msg);
+
 export class Certificate extends RecoverableSignature {
-  identPriv: Uint8Array;
-  identPub: Uint8Array;
+  identPriv!: Uint8Array;
+  identPub!: Uint8Array;
 
   constructor(publicKey: Uint8Array, compressed: boolean, r: Uint8Array, s: Uint8Array, recId: number) {
-    super(publicKey, compressed, r, s, recId);
+    super({publicKey: publicKey, compressed: compressed, r: r, s: s, recId: recId} as RecoverableSignatureProps);
   }
 
   public static generateIdentKeyPair(): BIP32KeyPair {
     let privKey = CryptoUtils.generateECPrivateKey();
-    let publicKey = secp256k1.publicKeyCreate(privKey, false);
+    let publicKey = secp.getPublicKey(privKey, false);
     return new BIP32KeyPair(privKey, new Uint8Array(0), publicKey);
   }
 
   public static createCertificate(caPair: BIP32KeyPair, identKeys: BIP32KeyPair): Certificate {
-    let pub = secp256k1.publicKeyConvert(identKeys.publicKey, true, new Uint8Array(33));
-    let mess = CryptoJS.lib.WordArray.create(pub);
-    let hash = CryptoUtils.wordArrayToByteArray(CryptoJS.SHA256(mess));
-    let signed = secp256k1.ecdsaSign(hash, caPair.privateKey);
-    let r = signed.signature.subarray(0, 32);
-    let s = signed.signature.subarray(32, 64);
-    let cert = new Certificate(CryptoUtils.compressPublicKey(caPair.publicKey), true, r, s, signed.recid);
+    let pub = CryptoUtils.compressPublicKey(identKeys.publicKey);
+    let signature = secp.sign(pub, caPair.privateKey, {format: 'recovered'});
+    let r = signature.subarray(1, 33);
+    let s = signature.subarray(33, 65);
+    let cert = new Certificate(CryptoUtils.compressPublicKey(caPair.publicKey), true, r, s, signature[0]);
     cert.identPriv = Certificate.toUInt(identKeys.privateKey);
     cert.identPub = pub;
-
     return cert;
   }
 
@@ -48,7 +49,7 @@ export class Certificate extends RecoverableSignature {
       let s = certData.subarray(65, 97);
       let recId = certData[97];
 
-      let hash = CryptoUtils.wordArrayToByteArray(CryptoJS.SHA256(pubKey));
+      let hash = CryptoUtils.wordArrayToByteArray(CryptoJS.SHA256(pubKey as any));
       let caPub = this.recoverFromSignature(recId, hash, r, s, true);
 
       let cert = new Certificate(caPub, true, r, s, recId);
@@ -63,14 +64,14 @@ export class Certificate extends RecoverableSignature {
     let certData = tlv.readPrimitive(TLV_CERT);
     let cert = this.fromTLV(certData);
     let signature = tlv.peekUnread();
-    let verified = secp256k1.ecdsaVerify(signature, hash, cert.identPub);
+    let verified = secp.verify(signature, hash, cert.identPub, { prehash: false });
 
 
     if (!verified) {
-      return null;
+      throw new Error("Error verifying signature.");
     }
 
-    return cert.publicKey;
+    return cert.publicKey!;
   }
 
   toStoreData() : Uint8Array {
@@ -78,17 +79,17 @@ export class Certificate extends RecoverableSignature {
       throw new Error("The private key must be set.");
     }
 
-    let storeDataLength = this.identPub.byteLength + this.r.byteLength + this.s.byteLength + this.identPriv.byteLength + 1;
+    let storeDataLength = this.identPub!.byteLength + this.r!.byteLength + this.s!.byteLength + this.identPriv.byteLength + 1;
     let storeData = new Uint8Array(storeDataLength);
     let off = 0;
 
     storeData.set(this.identPub, off);
     off += this.identPub.byteLength;
-    storeData.set(this.r, off);
-    off += this.r.byteLength;
-    storeData.set(this.s, off);
-    off += this.s.byteLength;
-    storeData[off] = this.recId;
+    storeData.set(this.r!, off);
+    off += this.r!.byteLength;
+    storeData.set(this.s!, off);
+    off += this.s!.byteLength;
+    storeData[off] = this.recId!;
     off += 1;
     storeData.set(this.identPriv, off);
     return storeData;

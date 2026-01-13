@@ -1,7 +1,7 @@
 import { Keycard } from "../src/index"
 import { GlobalPlatform } from "../src/global-platform"
 
-const pcsclite = require("@pokusew/pcsclite");
+const pcsclite = require('@nonth/pcsclite');
 const pcsc = pcsclite();
 const process = require("process");
 const fs = require("fs");

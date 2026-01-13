@@ -1,9 +1,8 @@
 import { CryptoUtils } from "./crypto-utils"
 import { BERTLV } from "./ber-tlv"
 import { Ethereum } from "./ethereum"
-
-const secp256k1 = require('secp256k1');
-const CryptoJS = require('crypto-js');
+import * as secp from '@noble/secp256k1';
+import {default  as CryptoJS} from "crypto-js"
 
 const TLV_KEY_TEMPLATE = 0xA1;
 const TLV_PUB_KEY = 0x80;
@@ -12,14 +11,14 @@ const TLV_CHAIN_CODE = 0x82;
 
 export class BIP32KeyPair {
   privateKey: Uint8Array;
-  publicKey: Uint8Array;
+  publicKey!: Uint8Array;
   chainCode: Uint8Array;
 
   calculatePublicKey() : void {
-    this.publicKey = secp256k1.publicKeyCreate(this.privateKey, false);
+    this.publicKey = secp.getPublicKey(this.privateKey, false);
   }
 
-  constructor(privateKey: Uint8Array, chainCode: Uint8Array, publicKey: Uint8Array) {
+  constructor(privateKey: Uint8Array, chainCode: Uint8Array, publicKey: Uint8Array | null) {
     if (privateKey == null && (chainCode != null || publicKey == null))  {
       throw new Error ("Error: Private key can be null only if the public key is not null and the chain code is null");
     }
@@ -49,30 +48,35 @@ export class BIP32KeyPair {
   }
 
   public static fromTLV(tlvData: Uint8Array) : BIP32KeyPair {
-    let tlv = new BERTLV(tlvData);
-    tlv.enterConstructed(TLV_KEY_TEMPLATE);
+    try {
+        let tlv = new BERTLV(tlvData);
+        tlv.enterConstructed(TLV_KEY_TEMPLATE);
 
-    let pubKey, privKey, chainCode;
-    let tag = tlv.readTag();
+        let pubKey, privKey, chainCode: Uint8Array;
+        let tag = tlv.readTag();
 
-    if (tag == TLV_PUB_KEY) {
-      tlv.unreadLastTag();
-      pubKey = tlv.readPrimitive(TLV_PUB_KEY);
-      tag = tlv.readTag();
+        if (tag == TLV_PUB_KEY) {
+            tlv.unreadLastTag();
+            pubKey = tlv.readPrimitive(TLV_PUB_KEY);
+            tag = tlv.readTag();
+        }
+
+        if (tag == TLV_PRIV_KEY) {
+            tlv.unreadLastTag();
+            privKey = tlv.readPrimitive(TLV_PRIV_KEY);
+            tag = tlv.readTag();
+
+            if (tag == TLV_CHAIN_CODE) {
+                tlv.unreadLastTag();
+                chainCode = tlv.readPrimitive(TLV_CHAIN_CODE);
+            }
+        }
+        
+        return new BIP32KeyPair(privKey!, chainCode!, pubKey!);
+
+    } catch(err: any) {
+        throw("Error generating keypair");
     }
-
-    if (tag == TLV_PRIV_KEY) {
-      tlv.unreadLastTag();
-      privKey = tlv.readPrimitive(TLV_PRIV_KEY);
-      tag = tlv.readTag();
-
-      if (tag == TLV_CHAIN_CODE) {
-        tlv.unreadLastTag();
-        chainCode = tlv.readPrimitive(TLV_CHAIN_CODE);
-      }
-    }
-
-    return new BIP32KeyPair(privKey, chainCode, pubKey);
   }
 
   toTLV(includePublic = true) : Uint8Array {

@@ -5,7 +5,7 @@ import { Constants } from "./constants";
 import { Identifiers } from "./identifiers";
 
 export class IdentComandset {
-  apduChannel: CardChannel;
+  apduChannel!: CardChannel;
 
   constructot(apduChannel: CardChannel) {
     this.apduChannel = apduChannel;

@@ -18,7 +18,7 @@ const apduCodes = [0x9000, 0x8500, 0x77ab, 0xcc10];
 const apduCode = 0x8800;
 
 test('Check if APDUResponse function throws error', () => {
-  expect(() => new APDUResponse(apdu1B)).toThrowError(new Error("APDU response must be at least 2 bytes"));
+  expect(() => new APDUResponse(apdu1B)).toThrow(new Error("APDU response must be at least 2 bytes"));
   expect(() => new APDUResponse(apdu)).not.toThrow(new Error("APDU response must be at least 2 bytes"));
 });
 
@@ -31,16 +31,16 @@ test('Check APDUResponse checkSW function', () => {
   expect(apduResp.checkSW(apduCodes)).toMatchObject(new APDUResponse(apdu));
   expect(apduErrResp.checkSW(apduCode)).toMatchObject(new APDUResponse(apduErr));
 
-  expect(() => apduErrResp.checkSW(apduCodes, "No match found in the codes array")).toThrowError(new APDUException("No match found in the codes array", apduErrResp.sw));
-  expect(() => apduErrResp.checkSW(apduCodes, "No match found in the codes array")).not.toThrowError(new APDUException("Error", apduErrResp.sw));
-  expect(() => apduSecCondNotSatisfiedResp.checkSW(apduCodes)).toThrowError(new APDUException("Security condition not satisfied", apduSecCondNotSatisfiedResp.sw));
-  expect(() => apduAuthMethodBlockedRes.checkSW(apduCodes)).toThrowError(new APDUException("Authentication method blocked", apduAuthMethodBlockedRes.sw));
-  expect(() => apduWrongPinMaskRes.checkSW(apduCodes)).toThrowError(new APDUException("Unexpected error SW", apduWrongPinMaskRes.sw));
+  expect(() => apduErrResp.checkSW(apduCodes, "No match found in the codes array")).toThrow(new APDUException("No match found in the codes array", apduErrResp.sw));
+  expect(() => apduErrResp.checkSW(apduCodes, "No match found in the codes array")).not.toThrow(new APDUException("Error", apduErrResp.sw));
+  expect(() => apduSecCondNotSatisfiedResp.checkSW(apduCodes)).toThrow(new APDUException("Security condition not satisfied", apduSecCondNotSatisfiedResp.sw));
+  expect(() => apduAuthMethodBlockedRes.checkSW(apduCodes)).toThrow(new APDUException("Authentication method blocked", apduAuthMethodBlockedRes.sw));
+  expect(() => apduWrongPinMaskRes.checkSW(apduCodes)).toThrow(new APDUException("Unexpected error SW", apduWrongPinMaskRes.sw));
 
   expect(apduResp.checkOK()).toMatchObject(new APDUResponse(apdu));
-  expect(() => apduErrResp.checkOK()).toThrowError(new APDUException("Unexpected error SW", apduErrResp.sw));
+  expect(() => apduErrResp.checkOK()).toThrow(new APDUException("Unexpected error SW", apduErrResp.sw));
 
   expect( apduResp.checkAuthOK()).toMatchObject(new APDUResponse(apdu));
-  expect(() => apduWrongPinMaskRes.checkAuthOK()).toThrowError(new WrongPINException(apduWrongPinMaskRes.sw2 & 0x0f));
-  expect(() => apduResp.checkAuthOK()).not.toThrowError(new WrongPINException(apduWrongPinMaskRes.sw2 & 0x0f));
+  expect(() => apduWrongPinMaskRes.checkAuthOK()).toThrow(new WrongPINException(apduWrongPinMaskRes.sw2 & 0x0f));
+  expect(() => apduResp.checkAuthOK()).not.toThrow(new WrongPINException(apduWrongPinMaskRes.sw2 & 0x0f));
 });

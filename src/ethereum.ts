@@ -1,5 +1,5 @@
 import { CryptoUtils } from "./crypto-utils"
-const CryptoJS = require('crypto-js');
+import {default  as CryptoJS} from "crypto-js"
 
 export namespace Ethereum {
   export function toEthereumAddress(publicKey: Uint8Array) : Uint8Array {

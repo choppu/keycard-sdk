@@ -2,73 +2,76 @@ import { BERTLV } from "./ber-tlv"
 import { CryptoUtils } from "./crypto-utils"
 import { Ethereum } from "./ethereum"
 import { Constants } from "./constants";
-
-const secp256k1 = require('secp256k1');
+import * as secp from '@noble/secp256k1'; 
+import { RecoverableSignatureProps } from "./types/recoverable-signature-types";
 export class RecoverableSignature {
-  publicKey: Uint8Array;
-  recId: number;
-  r: Uint8Array;
-  s: Uint8Array;
-  compressed: boolean;
+  publicKey?: Uint8Array;
+  recId?: number;
+  r?: Uint8Array;
+  s?: Uint8Array;
+  compressed?: boolean;
 
   public static toUInt(signedInt: Uint8Array): Uint8Array {
     return (signedInt[0] == 0) ? signedInt.subarray(1) : signedInt;
   }
 
-  constructor(publicKey: Uint8Array, compressed: boolean, r: Uint8Array, s: Uint8Array, recId: number);
-  constructor(hash: Uint8Array, tlvData: Uint8Array);
-
-  constructor(arg1: Uint8Array, arg2: Uint8Array | boolean, arg3?: Uint8Array, arg4?: Uint8Array, arg5?: number) {
-    if (arg1 instanceof Uint8Array && arg2 instanceof Uint8Array) {
-      this.fromTLV(arg1, arg2);
+  constructor(props: RecoverableSignatureProps) {
+    if (props.hash && props.tlvData) {
+      this.fromTLV(props.hash, props.tlvData);
     } else {
-      this.publicKey = arg1;
-      this.r = arg3;
-      this.s = arg4;
-      this.compressed = arg2 as boolean;
-      this.recId = arg5;
+        Object.assign(this, {publicKey: props.publicKey, recId: props.recId, r: props.r, s: props.s, compressed: props.compressed});
     }
   }
 
-  fromTLV(hash?: Uint8Array, tlvData?: Uint8Array): void {
-    let tlv = new BERTLV(tlvData);
+  fromTLV(hash: Uint8Array, tlvData: Uint8Array): void {
+    let tlv = new BERTLV(tlvData!);
+    let props = {} as RecoverableSignatureProps;
+    
     tlv.enterConstructed(Constants.TLV_SIGNATURE_TEMPLATE);
-    this.publicKey = tlv.readPrimitive(Constants.TLV_PUB_KEY);
+    props.publicKey = tlv.readPrimitive(Constants.TLV_PUB_KEY);
     tlv.enterConstructed(Constants.TLV_ECDSA_TEMPLATE);
-    this.r = RecoverableSignature.toUInt(tlv.readPrimitive(Constants.TLV_INT));
-    this.s = RecoverableSignature.toUInt(tlv.readPrimitive(Constants.TLV_INT));
-    this.compressed = false;
+    props.r = RecoverableSignature.toUInt(tlv.readPrimitive(Constants.TLV_INT));
+    props.s = RecoverableSignature.toUInt(tlv.readPrimitive(Constants.TLV_INT));
+    props.compressed = false;
+    props.recId = this.calculateRecID(hash);
 
-    this.calculateRecID(hash);
+    Object.assign(this, {publicKey: props.publicKey, rectId: props.recId, r: props.r, s: props.s, compressed: props.compressed});
   }
 
-  calculateRecID(hash: Uint8Array): void {
+  calculateRecID(hash: Uint8Array): number {
     let recId = -1;
 
     for (let i = 0; i < 4; i++) {
-      let candidate = this.recoverFromSignature(i, hash, this.r, this.s, this.compressed);
+      let candidate = this.recoverFromSignature(i, hash, this.r!, this.s!, this.compressed!);
 
-      if (CryptoUtils.Uint8ArrayEqual(candidate, this.publicKey)) {
+      if (CryptoUtils.Uint8ArrayEqual(candidate, this.publicKey!)) {
         recId = i;
-        this.recId = i;
         break;
       }
     }
 
     if (recId == -1) {
       throw new Error("Error: Unrecoverable signature, cannot find recId");
+    } else {
+        return recId;
     }
   }
 
   getEthereumAddress(): Uint8Array {
-    return Ethereum.toEthereumAddress(this.publicKey);
+    return Ethereum.toEthereumAddress(this.publicKey!);
   }
 
   recoverFromSignature(recId: number, hash: Uint8Array, r: Uint8Array, s: Uint8Array, compressed: boolean): Uint8Array {
-    let signature = new Uint8Array(this.r.byteLength + this.s.byteLength);
+    let signature = new Uint8Array(this.r!.byteLength + this.s!.byteLength + 1);
     signature.set(r, 0);
     signature.set(s, r.byteLength);
+    signature[65] = recId;
+    let compressedKey = secp.recoverPublicKey(signature, hash, {prehash: false});
 
-    return secp256k1.ecdsaRecover(signature, recId, hash, compressed);
+    if (compressed) {
+      return compressedKey;
+    } else {
+      return secp.Point.fromBytes(compressedKey).toBytes(false);
+    }
   }
 }

@@ -5,7 +5,6 @@ import { APDUResponse } from "./apdu-response";
 import { APDUCommand } from "./apdu-command";
 import { GlobalPlatformConstants } from "./global-platform-constants";
 import { SCP02Session } from "./scp02-session";
-import { APDUException } from "./apdu-exception";
 import { GlobalPlatformCrypto } from "./global-platform-crypto";
 import { CryptoUtils } from "./crypto-utils";
 import { Constants } from "./constants";
@@ -18,9 +17,9 @@ const developmentKey = new Uint8Array([0xc2, 0x12, 0xe0, 0x73, 0xff, 0x8b, 0x4b,
 
 export class GlobalPlatformCommandset {
   apduChannel: CardChannel;
-  secureChannel: SCP02Channel;
+  secureChannel!: SCP02Channel;
   scp02Keys: SCP02Keys;
-  scp02Session: SCP02Session;
+  scp02Session!: SCP02Session;
 
   constructor(apduChannel: CardChannel) {
     this.apduChannel = apduChannel;
@@ -33,9 +32,9 @@ export class GlobalPlatformCommandset {
 
     arr.push(0x80);
     arr.push(encrypted.byteLength);
-    arr.push.apply(arr, encrypted);
+    arr.push.apply(arr, encrypted as any);
     arr.push(kcv.byteLength);
-    arr.push.apply(arr, kcv);
+    arr.push.apply(arr, kcv as any);
   }
 
   putSCP02Keys(oldKvn: number, newKvn: number, encKey: Uint8Array, macKey = encKey, dekKey = encKey): Promise<APDUResponse> {
@@ -76,7 +75,7 @@ export class GlobalPlatformCommandset {
 
     try {
       this.scp02Session = SCP02Channel.verifyChallenge(hostChallenge, this.scp02Keys, apduResp);
-    } catch (err) {
+    } catch (err: any) {
       if (err.sw) {
         this.scp02Session = SCP02Channel.verifyChallenge(hostChallenge, gpDefaultKeys, apduResp);
         this.scp02Session.useFallbackKeys();
@@ -109,7 +108,7 @@ export class GlobalPlatformCommandset {
 
     let load = await Load.new(cap);
 
-    let block: Uint8Array;
+    let block;
     let steps = load.blocksCount();
 
     while ((block = load.nextDataBlock()) != null) {

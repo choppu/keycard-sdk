@@ -10,7 +10,7 @@ let zip = new JSZip();
 export class Load {
   offset: number;
   count: number;
-  fullData: Uint8Array;
+  fullData!: Uint8Array;
 
   constructor() {
     this.offset = 0;
@@ -24,8 +24,12 @@ export class Load {
   } 
 
   async readCap(cap: Uint8Array) : Promise<void> {
+    type appletObject = {
+        [key: string]: Uint8Array
+    }
+
     let zipRead = await zip.loadAsync(cap);
-    let appletObj = {};
+    let appletObj = {} as appletObject;
     let length = 0;
     for (let file in zipRead.files) {
       for(let y = 0; y < fileNames.length; y++) {

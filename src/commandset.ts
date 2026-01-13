@@ -8,8 +8,7 @@ import { CryptoUtils } from "./crypto-utils"
 import { BIP32KeyPair } from "./bip32key"
 import { KeyPath } from "./key-path"
 import { Constants } from "./constants"
-
-const CryptoJS = require("crypto-js");
+import {default  as CryptoJS} from "crypto-js"
 
 const INS_INIT = 0xfe;
 const INS_GET_STATUS = 0xf2;
@@ -55,7 +54,7 @@ const KEYCARD_AID = new Uint8Array([0xa0, 0x00, 0x00, 0x08, 0x04, 0x00, 0x01, 0x
 export class Commandset {
   apduChannel: CardChannel;
   secureChannel: SecureChannel;
-  applicationInfo: ApplicationInfo;
+  applicationInfo: ApplicationInfo | null;
 
   constructor(channel: CardChannel) {
     this.apduChannel = channel;
@@ -68,7 +67,7 @@ export class Commandset {
   }
 
   getPairing() : Pairing {
-    return this.secureChannel.pairing;
+    return this.secureChannel.pairing!;
   }
 
   setPairing(pairing: Pairing) : void {
@@ -80,7 +79,7 @@ export class Commandset {
     let resp = await this.apduChannel.send(selectApplet);
 
     if (resp.sw == 0x9000) {
-      this.applicationInfo = new ApplicationInfo(resp.data);
+      this.applicationInfo = new ApplicationInfo(resp.data!);
 
       if (this.applicationInfo.hasSecureChannelCapability()) {
         this.secureChannel.generateSecret(this.applicationInfo.secureChannelPubKey);
@@ -292,7 +291,7 @@ export class Commandset {
   }
 
   async setNDEF(ndef: Uint8Array) : Promise<APDUResponse> {
-    if ((this.applicationInfo.appVersion >> 8) > 2) {
+    if ((this.applicationInfo!.appVersion! >> 8) > 2) {
       if ((ndef.byteLength - 2) != ((ndef[0] << 8) | ndef[1])) {
         let tmp = new Uint8Array(ndef.byteLength + 2);
         tmp[0] = ndef.byteLength >> 8;

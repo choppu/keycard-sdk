@@ -5,10 +5,10 @@ const SW_WRONG_PIN_MASK = 0x63C0;
 
 export class APDUResponse {
   apdu: Uint8Array;
-  data: Uint8Array;
-  sw: number;
-  sw1: number;
-  sw2: number;
+  data!: Uint8Array;
+  sw!: number;
+  sw1!: number;
+  sw2!: number;
 
  private parse(apdu: Uint8Array) : void {
     let length = apdu.byteLength;
@@ -32,7 +32,7 @@ export class APDUResponse {
     return this.sw == Constants.SW_OK;
   }
 
-  checkSW(codes: number|number[], message = null) : APDUResponse {
+  checkSW(codes: number|number[], message?: string | null) : APDUResponse {
     if (Array.isArray(codes)) {
       if (codes.includes(this.sw)) {
         return this;
@@ -57,7 +57,7 @@ export class APDUResponse {
     }
   }
 
-  checkOK(message = null) : APDUResponse {
+  checkOK(message: string | null = null) : APDUResponse {
     return this.checkSW(Constants.SW_OK, message);
   }
 

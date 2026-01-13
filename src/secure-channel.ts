@@ -4,9 +4,8 @@ import { APDUResponse } from "./apdu-response";
 import { APDUCommand } from "./apdu-command";
 import { CryptoUtils } from "./crypto-utils";
 import { APDUException } from "./apdu-exception";
-
-const secp256k1 = require('secp256k1');
-const CryptoJS = require('crypto-js');
+import * as secp from '@noble/secp256k1';
+import {default  as CryptoJS} from "crypto-js"
 
 const SC_SECRET_LENGTH = 32;
 const SC_BLOCK_SIZE = 16;
@@ -18,20 +17,18 @@ const INS_UNPAIR = 0x13;
 
 const PAIR_P1_FIRST_STEP = 0x00;
 const PAIR_P1_LAST_STEP = 0x01;
-  
-const PAYLOAD_MAX_SIZE = 223;
 
 const PAIRING_MAX_CLIENT_COUNT = 5;
 
 const metaLength = 16;
 
 export class SecureChannel {
-  secret: Uint8Array;
-  publicKey: Uint8Array;
-  iv: Uint8Array;
-  sessionEncKey: Uint8Array;
-  sessionMacKey: Uint8Array;
-  pairing: Pairing;
+  secret!: Uint8Array;
+  publicKey!: Uint8Array;
+  iv!: Uint8Array;
+  sessionEncKey!: Uint8Array;
+  sessionMacKey!: Uint8Array;
+  pairing!: Pairing;
   open: boolean;
 
   constructor() {
@@ -40,8 +37,8 @@ export class SecureChannel {
 
   generateSecret(keyData: Uint8Array) : void {
     let privKey = CryptoUtils.generateECPrivateKey();
-    this.publicKey = secp256k1.publicKeyCreate(privKey, false);
-    this.secret = secp256k1.ecdh(keyData, privKey, {hashfn: (x, _) => x}, new Uint8Array(32));
+    this.publicKey = secp.getPublicKey(privKey, false);
+    this.secret = secp.getSharedSecret(privKey, keyData).subarray(1, 33);
   }
 
   setPairing(pairing: Pairing) : void {
@@ -54,10 +51,10 @@ export class SecureChannel {
     let hashBytes = CryptoJS.algo.SHA512.create();
     hashBytes.update(CryptoJS.lib.WordArray.create(this.secret));
     hashBytes.update(CryptoJS.lib.WordArray.create(this.pairing.pairingKey))
-    hashBytes.update(CryptoJS.lib.WordArray.create(data.subarray(0, SC_SECRET_LENGTH)));
+    hashBytes.update(CryptoJS.lib.WordArray.create(data!.subarray(0, SC_SECRET_LENGTH)));
     let keyData = CryptoUtils.wordArrayToByteArray(hashBytes.finalize());
 
-    this.iv = data.subarray(SC_SECRET_LENGTH, data.byteLength);
+    this.iv = data!.subarray(SC_SECRET_LENGTH, data!.byteLength);
     this.sessionEncKey = keyData.subarray(0, SC_SECRET_LENGTH);
     this.sessionMacKey = keyData.subarray(SC_SECRET_LENGTH);
     this.open = true;
@@ -75,7 +72,7 @@ export class SecureChannel {
     let dataWArray = CryptoJS.lib.WordArray.create(data);
     let sessionEncKeyWArray = CryptoJS.lib.WordArray.create(this.sessionEncKey);
     let ivWArray = CryptoJS.lib.WordArray.create(this.iv);
-    let decData = CryptoJS.AES.decrypt({ciphertext: dataWArray}, sessionEncKeyWArray, {iv: ivWArray, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Iso97971});
+    let decData = CryptoJS.AES.decrypt({ciphertext: dataWArray} as any, sessionEncKeyWArray, {iv: ivWArray, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Iso97971});
     return CryptoUtils.wordArrayToByteArray(decData);
   }
 
@@ -120,9 +117,9 @@ export class SecureChannel {
     if (this.open) {
       let data = resp.data;
       let meta = new Uint8Array(metaLength);
-      meta[0] = data.byteLength;
-      let mac = data.subarray(0, this.iv.byteLength);
-      data = data.subarray(this.iv.byteLength, data.byteLength);
+      meta[0] = data!.byteLength;
+      let mac = data!.subarray(0, this.iv.byteLength);
+      data = data!.subarray(this.iv.byteLength, data!.byteLength);
 
       let plainData = this.decryptAPDU(data);
       this.updateIV(meta, data);
@@ -144,7 +141,7 @@ export class SecureChannel {
   }
 
   verifyMutuallyAuthenticateResponse(response: APDUResponse) : void {
-    if (response.data.length != SC_SECRET_LENGTH) {
+    if (response.data!.length != SC_SECRET_LENGTH) {
       throw new Error("Error: Invalid authentication data from the card");
     }
   }
@@ -165,8 +162,8 @@ export class SecureChannel {
 
     let respData = resp.data;
     let cardCryptogram = new Uint8Array(32);
-    cardCryptogram.set(respData.slice(0, 32), 0);
-    let cardChallenge = respData.subarray(32, respData.byteLength);
+    cardCryptogram.set(respData!.slice(0, 32), 0);
+    let cardChallenge = respData!.subarray(32, respData!.byteLength);
     let checkCryptogram;
 
     let sha256Data = CryptoJS.algo.SHA256.create();
@@ -176,7 +173,7 @@ export class SecureChannel {
     checkCryptogram = CryptoUtils.wordArrayToByteArray(sha256Data.finalize());
 
     if (!CryptoUtils.Uint8ArrayEqual(checkCryptogram, cardCryptogram)) {
-      throw new APDUException("Error: Invalid card cryptogram");
+      throw new APDUException(`Error: Invalid card cryptogram`);
     }
     sha256Data.reset(); 
     sha256Data.update(CryptoJS.lib.WordArray.create(sharedSecret));
@@ -189,10 +186,10 @@ export class SecureChannel {
 
     sha256Data.reset();
     sha256Data.update(CryptoJS.lib.WordArray.create(sharedSecret));
-    sha256Data.update(CryptoJS.lib.WordArray.create(respData.subarray(1)));
+    sha256Data.update(CryptoJS.lib.WordArray.create(respData!.subarray(1)));
     let pKey = CryptoUtils.wordArrayToByteArray(sha256Data.finalize());
 
-    this.pairing = new Pairing(pKey, respData[0]);
+    this.pairing = new Pairing(pKey, respData![0]);
   }
 
   async autoUnpair(apduChannel: CardChannel) : Promise<void> {

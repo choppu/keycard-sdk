@@ -1,4 +1,4 @@
-const CryptoJS = require("crypto-js");
+import {default  as CryptoJS} from "crypto-js"
 import { CryptoUtils } from "./crypto-utils";
 
 export class Pairing {

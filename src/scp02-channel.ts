@@ -48,13 +48,13 @@ export class SCP02Channel {
 
     let data = apduResp.data;
 
-    if (data.byteLength != 28) {
-      throw new APDUException("Error: Wrong data length, expected 28, got " + data.byteLength, apduResp.sw);
+    if (data!.byteLength != 28) {
+      throw new APDUException("Error: Wrong data length, expected 28, got " + data!.byteLength, apduResp.sw);
     }
 
-    let cardChallenge = data.subarray(12, 20);
-    let cardCryptogram = data.subarray(20);
-    let seq = data.subarray(12, 14);
+    let cardChallenge = data!.subarray(12, 20);
+    let cardCryptogram = data!.subarray(20);
+    let seq = data!.subarray(12, 14);
 
     let sessionEncKey = GlobalPlatformCrypto.deriveSCP02SessionKey(scp02Keys.encKey, seq, DERIVATION_PURPOSE_ENC);
     let sessionMacKey = GlobalPlatformCrypto.deriveSCP02SessionKey(scp02Keys.macKey, seq, DERIVATION_PURPOSE_MAC);

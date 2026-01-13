@@ -25,9 +25,9 @@ mnemonic.fetchBIP39EnglishWordlist();
 
 test('Check Mnemonic functions', () => {
   expect(mnemonic.wordlist).toMatchObject(MnemonicEnglishDictionary.words);
-  expect(() => mnemonic.setWordlist(mnemonicPhrase.split(" "))).toThrowError(new Error("Error: The list must contain exactly 2048 entries"));
-  expect(() => mnemonic.setWordlist(MnemonicEnglishDictionary.words)).not.toThrowError(new Error("Error: The list must contain exactly 2048 entries"));
-  expect(() => mnemonicNoWords.getWords()).toThrowError(new Error("Error: The wordlist must be set first"));
+  expect(() => mnemonic.setWordlist(mnemonicPhrase.split(" "))).toThrow(new Error("Error: The list must contain exactly 2048 entries"));
+  expect(() => mnemonic.setWordlist(MnemonicEnglishDictionary.words)).not.toThrow(new Error("Error: The list must contain exactly 2048 entries"));
+  expect(() => mnemonicNoWords.getWords()).toThrow(new Error("Error: The wordlist must be set first"));
   expect(mnemonic.toMnemonicPhrase()).toEqual(mnemonicPhrase);
   expect(mnemonic.toBinarySeed()).toEqual(binSeed);
   expect(mnemonic.toBinarySeed(mnemonicPass)).toEqual(binSeedWithPass);

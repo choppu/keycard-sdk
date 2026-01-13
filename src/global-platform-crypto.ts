@@ -1,6 +1,5 @@
 import { CryptoUtils } from "./crypto-utils";
-
-const CryptoJS = require('crypto-js');
+import {default  as CryptoJS} from "crypto-js"
 
 export namespace GlobalPlatformCrypto {
   function resizeKey8(key: Uint8Array) : Uint8Array {

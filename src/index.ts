@@ -17,7 +17,7 @@ import { Constants } from "./constants"
 import { Certificate } from "./certificate"
 import { Identifiers } from "./identifiers"
 import { IdentComandset } from "./ident-comandset"
-
+import type * as RecoverableSignatureTypes from "./types/recoverable-signature-types"
 
 export let Keycard = {
   Commandset: Commandset,
@@ -40,6 +40,8 @@ export let Keycard = {
   Constants: Constants,
   Identifiers: Identifiers
 }
+
+export { RecoverableSignatureTypes } ;
 
 export default Keycard;
 Object.assign(module.exports, Keycard);

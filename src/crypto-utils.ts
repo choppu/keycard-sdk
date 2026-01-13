@@ -1,4 +1,4 @@
-const secp256k1 = require("secp256k1");
+import * as secp from '@noble/secp256k1';
 
 declare global {
   interface Window{
@@ -39,10 +39,7 @@ export namespace CryptoUtils {
   }
 
   export function generateECPrivateKey() {
-    while (true) {
-      let privKey = getRandomBytes(32);
-      if (secp256k1.privateKeyVerify(privKey)) return privKey;
-    }
+    return secp.utils.randomSecretKey();
   }
 
   export function getRandomBytes(size: number) : Uint8Array {
@@ -62,6 +59,6 @@ export namespace CryptoUtils {
   }
 
   export function compressPublicKey(pubkey: Uint8Array) : Uint8Array {
-    return secp256k1.publicKeyConvert(pubkey, true, new Uint8Array(33));
+    return secp.Point.fromBytes(pubkey).toBytes();
   }
 }

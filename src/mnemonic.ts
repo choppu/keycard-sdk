@@ -1,13 +1,13 @@
 import { MnemonicEnglishDictionary } from "./mnemonic-english-dictionary"
 import { CryptoUtils } from "./crypto-utils"
 import { BIP32KeyPair } from "./bip32key";
+import {default  as CryptoJS} from "crypto-js";
 
 const WORDLIST_SIZE = 2048;
-const CryptoJS = require("crypto-js")
 
 export class Mnemonic {
   indexes: number[];
-  wordlist: string[];
+  wordlist!: string[];
 
   constructor(data: Uint8Array) {
     this.indexes = new Array(data.length/2);

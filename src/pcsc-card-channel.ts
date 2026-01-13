@@ -3,7 +3,7 @@ import { APDUResponse } from "./apdu-response";
 import { APDUCommand } from "./apdu-command";
 import { CardIOError } from "./apdu-exception"
 
-const pcsclite = require('@pokusew/pcsclite');
+const pcsclite = require('@nonth/pcsclite');
 
 export class PCSCCardChannel implements CardChannel {
   cardChannel: any;
@@ -29,7 +29,7 @@ export class PCSCCardChannel implements CardChannel {
 
   sendDataAsync(channel: any, protocol: number, cmd: Buffer) : Promise<any> {
     return new Promise(function(resolve,reject) {
-      channel.transmit(cmd, 255, protocol, function(err, resp) {
+      channel.transmit(cmd, 255, protocol, function(err: any, resp: any) {
         if (err) {
           reject(err);
         } else {
