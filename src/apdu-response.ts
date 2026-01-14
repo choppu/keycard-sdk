@@ -1,5 +1,5 @@
-import {APDUException, WrongPINException} from "./apdu-exception"
-import { Constants } from "./constants";
+import {APDUException, WrongPINException} from "./apdu-exception.ts"
+import { Constants } from "./constants.ts";
 
 const SW_WRONG_PIN_MASK = 0x63C0;
 

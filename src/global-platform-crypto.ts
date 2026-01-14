@@ -1,4 +1,4 @@
-import { CryptoUtils } from "./crypto-utils";
+import { CryptoUtils } from "./crypto-utils.ts";
 import {default  as CryptoJS} from "crypto-js"
 
 export namespace GlobalPlatformCrypto {

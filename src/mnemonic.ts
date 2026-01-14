@@ -1,5 +1,5 @@
-import { MnemonicEnglishDictionary } from "./mnemonic-english-dictionary"
-import { BIP32KeyPair } from "./bip32key";
+import { MnemonicEnglishDictionary } from "./mnemonic-english-dictionary.ts"
+import { BIP32KeyPair } from "./bip32key.ts";
 import { sha512 } from "@noble/hashes/sha2";
 import { pbkdf2 } from "@noble/hashes/pbkdf2";
 

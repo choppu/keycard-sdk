@@ -1,11 +1,11 @@
-import { GlobalPlatformCommandset } from "./global-platform-commandset";
-import { GlobalPlatformCrypto } from "./global-platform-crypto";
-import { GlobalPlatformConstants } from "./global-platform-constants";
-import { SCP02Channel } from "./scp02-channel";
-import { SCP02Keys } from "./scp02-keys";
-import { SCP02Session } from "./scp02-session";
-import { SCP02Wrapper } from "./scp02-wrapper";
-import { Load } from "./load";
+import { GlobalPlatformCommandset } from "./global-platform-commandset.ts";
+import { GlobalPlatformCrypto } from "./global-platform-crypto.ts";
+import { GlobalPlatformConstants } from "./global-platform-constants.ts";
+import { SCP02Channel } from "./scp02-channel.ts";
+import { SCP02Keys } from "./scp02-keys.ts";
+import { SCP02Session } from "./scp02-session.ts";
+import { SCP02Wrapper } from "./scp02-wrapper.ts";
+import { Load } from "./load.ts";
 
 export let GlobalPlatform = {
   GlobalPlatformCommandset: GlobalPlatformCommandset,

@@ -1,4 +1,4 @@
-import { BERTLV } from "./ber-tlv"
+import { BERTLV } from "./ber-tlv.ts"
 
 const TLV_APPLICATION_STATUS_TEMPLATE = 0xa3;
 

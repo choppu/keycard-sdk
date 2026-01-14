@@ -1,13 +1,13 @@
-import { CardChannel } from "./card-channel";
-import { SCP02Wrapper } from "./scp02-wrapper";
-import { SCP02Keys } from "./scp02-keys";
-import { SCP02Session } from "./scp02-session";
-import { APDUResponse } from "./apdu-response";
-import { APDUException } from "./apdu-exception";
-import { Constants } from "./constants"
-import { GlobalPlatformCrypto } from "./global-platform-crypto";
-import { APDUCommand } from "./apdu-command";
-import { CryptoUtils } from "./crypto-utils";
+import { CardChannel } from "./card-channel.ts";
+import { SCP02Wrapper } from "./scp02-wrapper.ts";
+import { SCP02Keys } from "./scp02-keys.ts";
+import { SCP02Session } from "./scp02-session.ts";
+import { APDUResponse } from "./apdu-response.ts";
+import { APDUException } from "./apdu-exception.ts";
+import { Constants } from "./constants.ts"
+import { GlobalPlatformCrypto } from "./global-platform-crypto.ts";
+import { APDUCommand } from "./apdu-command.ts";
+import { CryptoUtils } from "./crypto-utils.ts";
 
 const DERIVATION_PURPOSE_ENC = new Uint8Array([0x01, 0x82]);
 const DERIVATION_PURPOSE_MAC = new Uint8Array([0x01, 0x01]);

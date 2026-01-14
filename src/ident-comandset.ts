@@ -1,8 +1,8 @@
-import { APDUCommand } from "./apdu-command";
-import { APDUResponse } from "./apdu-response";
-import { CardChannel } from "./card-channel";
-import { Constants } from "./constants";
-import { Identifiers } from "./identifiers";
+import { APDUCommand } from "./apdu-command.ts";
+import { APDUResponse } from "./apdu-response.ts";
+import { CardChannel } from "./card-channel.ts";
+import { Constants } from "./constants.ts";
+import { Identifiers } from "./identifiers.ts";
 
 export class IdentComandset {
   apduChannel!: CardChannel;

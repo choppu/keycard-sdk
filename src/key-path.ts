@@ -1,5 +1,5 @@
-import { Constants } from "./constants";
-import { CryptoUtils } from "./crypto-utils";
+import { Constants } from "./constants.ts";
+import { CryptoUtils } from "./crypto-utils.ts";
 
 export class KeyPath {
   source: number;

@@ -1,6 +1,6 @@
-import { CryptoUtils } from "./crypto-utils"
-import { BERTLV } from "./ber-tlv"
-import { Ethereum } from "./ethereum"
+import { CryptoUtils } from "./crypto-utils.ts"
+import { BERTLV } from "./ber-tlv.ts"
+import { Ethereum } from "./ethereum.ts"
 import * as secp from '@noble/secp256k1';
 import { hmac } from "@noble/hashes/hmac";
 import { sha512 } from "@noble/hashes/sha2";

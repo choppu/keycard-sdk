@@ -1,4 +1,4 @@
-import { CryptoUtils } from "./crypto-utils";
+import { CryptoUtils } from "./crypto-utils.ts";
 
 export namespace Identifiers {
   export const CASH_AID = CryptoUtils.stringToUint8Array("A000000804000103");

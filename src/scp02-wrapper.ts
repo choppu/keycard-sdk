@@ -1,6 +1,6 @@
-import { APDUCommand } from "./apdu-command";
-import { CryptoUtils } from "./crypto-utils";
-import { GlobalPlatformCrypto } from "./global-platform-crypto";
+import { APDUCommand } from "./apdu-command.ts";
+import { CryptoUtils } from "./crypto-utils.ts";
+import { GlobalPlatformCrypto } from "./global-platform-crypto.ts";
 
 export class SCP02Wrapper {
   macKey: Uint8Array;

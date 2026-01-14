@@ -1,4 +1,4 @@
-import { SCP02Keys } from "./scp02-keys";
+import { SCP02Keys } from "./scp02-keys.ts";
 
 export class SCP02Session {
   scp02Keys: SCP02Keys;

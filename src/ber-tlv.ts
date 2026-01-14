@@ -1,4 +1,4 @@
-import { Constants } from "./constants"
+import { Constants } from "./constants.ts"
 
 const TLV_BOOL = 0x01;
 

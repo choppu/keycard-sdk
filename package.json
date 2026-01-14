@@ -2,18 +2,14 @@
   "name": "keycard-sdk",
   "version": "3.0.1",
   "description": "Keycard Typescript SDK",
-  "type": "commonjs",
+  "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "build": "tsc",
-    "ci": "npm t & wait",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest",
-    "prepare": "npm run build"
+    "clean": "rm -rf dist",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest"
   },
   "author": "Ksenia Balistreri",
   "license": "MIT",

@@ -1,9 +1,9 @@
-import { Pairing } from "./pairing"
-import { CardChannel } from "./card-channel"
-import { APDUResponse } from "./apdu-response";
-import { APDUCommand } from "./apdu-command";
-import { CryptoUtils } from "./crypto-utils";
-import { APDUException } from "./apdu-exception";
+import { Pairing } from "./pairing.ts"
+import { CardChannel } from "./card-channel.ts"
+import { APDUResponse } from "./apdu-response.ts";
+import { APDUCommand } from "./apdu-command.ts";
+import { CryptoUtils } from "./crypto-utils.ts";
+import { APDUException } from "./apdu-exception.ts";
 import * as secp from '@noble/secp256k1';
 import {default  as CryptoJS} from "crypto-js"
 import { sha256, sha512 } from "@noble/hashes/sha2";

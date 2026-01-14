@@ -1,7 +1,7 @@
-import { CardChannel } from "./card-channel"
-import { APDUResponse } from "./apdu-response";
-import { APDUCommand } from "./apdu-command";
-import { CardIOError } from "./apdu-exception"
+import { CardChannel } from "./card-channel.ts"
+import { APDUResponse } from "./apdu-response.ts";
+import { APDUCommand } from "./apdu-command.ts";
+import { CardIOError } from "./apdu-exception.ts"
 import { CardReader } from "@nonth/pcsclite";
 export class PCSCCardChannel implements CardChannel {
   cardChannel: CardReader;

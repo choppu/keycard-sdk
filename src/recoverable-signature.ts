@@ -1,9 +1,9 @@
-import { BERTLV } from "./ber-tlv"
-import { CryptoUtils } from "./crypto-utils"
-import { Ethereum } from "./ethereum"
-import { Constants } from "./constants";
+import { BERTLV } from "./ber-tlv.ts"
+import { CryptoUtils } from "./crypto-utils.ts"
+import { Ethereum } from "./ethereum.ts"
+import { Constants } from "./constants.ts";
 import * as secp from '@noble/secp256k1'; 
-import { RecoverableSignatureProps } from "./types/recoverable-signature-types";
+import { RecoverableSignatureProps } from "./types/recoverable-signature-types.ts";
 export class RecoverableSignature {
   publicKey?: Uint8Array;
   recId?: number;

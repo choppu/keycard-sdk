@@ -1,12 +1,12 @@
-import { BERTLV } from "./ber-tlv";
-import { BIP32KeyPair } from "./bip32key";
-import { Constants } from "./constants";
-import { CryptoUtils } from "./crypto-utils";
-import { RecoverableSignature } from "./recoverable-signature";
+import { BERTLV } from "./ber-tlv.ts";
+import { BIP32KeyPair } from "./bip32key.ts";
+import { Constants } from "./constants.ts";
+import { CryptoUtils } from "./crypto-utils.ts";
+import { RecoverableSignature } from "./recoverable-signature.ts";
 import * as secp from '@noble/secp256k1';
 import { sha256 } from '@noble/hashes/sha2'
 import { hmac } from '@noble/hashes/hmac';
-import { RecoverableSignatureProps } from "./types/recoverable-signature-types";
+import { RecoverableSignatureProps } from "./types/recoverable-signature-types.ts";
 
 const TLV_CERT = 0x8a;
 

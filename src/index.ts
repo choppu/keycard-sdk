@@ -1,23 +1,23 @@
-import { Commandset } from "./commandset"
-import { Pairing } from "./pairing"
-import { ApplicationInfo } from "./application-info"
-import { ApplicationStatus } from "./application-status"
-import { APDUCommand } from "./apdu-command"
-import { BERTLV } from "./ber-tlv"
-import { BIP32KeyPair } from "./bip32key"
-import { CashApplicationInfo } from "./cash-application-info"
-import { CashCommandset } from "./cash-commandset"
-import { Ethereum } from "./ethereum"
-import { KeyPath } from "./key-path"
-import { Mnemonic } from "./mnemonic"
-import { RecoverableSignature } from "./recoverable-signature"
-import { PCSCCardChannel } from "./pcsc-card-channel"
-import { CryptoUtils } from "./crypto-utils"
-import { Constants } from "./constants"
-import { Certificate } from "./certificate"
-import { Identifiers } from "./identifiers"
-import { IdentComandset } from "./ident-comandset"
-import type * as RecoverableSignatureTypes from "./types/recoverable-signature-types"
+import { Commandset } from "./commandset.ts"
+import { Pairing } from "./pairing.ts"
+import { ApplicationInfo } from "./application-info.ts"
+import { ApplicationStatus } from "./application-status.ts"
+import { APDUCommand } from "./apdu-command.ts"
+import { BERTLV } from "./ber-tlv.ts"
+import { BIP32KeyPair } from "./bip32key.ts"
+import { CashApplicationInfo } from "./cash-application-info.ts"
+import { CashCommandset } from "./cash-commandset.ts"
+import { Ethereum } from "./ethereum.ts"
+import { KeyPath } from "./key-path.ts"
+import { Mnemonic } from "./mnemonic.ts"
+import { RecoverableSignature } from "./recoverable-signature.ts"
+import { PCSCCardChannel } from "./pcsc-card-channel.ts"
+import { CryptoUtils } from "./crypto-utils.ts"
+import { Constants } from "./constants.ts"
+import { Certificate } from "./certificate.ts"
+import { Identifiers } from "./identifiers.ts"
+import { IdentComandset } from "./ident-comandset.ts"
+import type * as RecoverableSignatureTypes from "./types/recoverable-signature-types.ts"
 
 export let Keycard = {
   Commandset: Commandset,
@@ -41,7 +41,5 @@ export let Keycard = {
   Identifiers: Identifiers
 }
 
-export { RecoverableSignatureTypes } ;
-
+export { RecoverableSignatureTypes };
 export default Keycard;
-Object.assign(module.exports, Keycard);

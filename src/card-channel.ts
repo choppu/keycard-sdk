@@ -1,5 +1,5 @@
-import { APDUCommand } from "./apdu-command"
-import { APDUResponse } from "./apdu-response"
+import { APDUCommand } from "./apdu-command.ts"
+import { APDUResponse } from "./apdu-response.ts"
 export interface CardChannel {
   send: (cmd: APDUCommand) => Promise<APDUResponse>;
   isConnected: () => boolean;

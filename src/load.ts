@@ -1,4 +1,4 @@
-const JSZip = require("jszip");
+import JSZip from "jszip";
 
 const BLOCK_SIZE = 247;
 const fileNames = ["Header.cap", "Directory.cap", "Import.cap", "Applet.cap", "Class.cap", "Method.cap", "StaticField.cap", "Export.cap", "ConstantPool.cap", "RefLocation.cap"];
@@ -29,31 +29,36 @@ export class Load {
     let zipRead = await zip.loadAsync(cap);
     let appletObj = {} as appletObject;
     let length = 0;
-    for (let file in zipRead.files) {
-      for(let y = 0; y < fileNames.length; y++) {
-        if(file.includes(fileNames[y])) {
-          let data = await zipRead.file(file).async("uint8array"); 
-          appletObj[fileNames[y]] = data;
-          length += data.byteLength;
+    
+    try {
+        for (let file in zipRead.files) {
+            for(let y = 0; y < fileNames.length; y++) {
+                if(file.includes(fileNames[y])) {
+                    let data = await zipRead!.file(file)!.async("uint8array"); 
+                    appletObj[fileNames[y]] = data;
+                    length += data.byteLength;
+                }
+            }
         }
-      }
-    }
   
-    let result = new Uint8Array(length + 4);
-    let offset = 4;
-    result[0] = 0xc4;
-    result[1] = 0x82;
-    result[2] = length >> 8;
-    result[3] = length;
+        let result = new Uint8Array(length + 4);
+        let offset = 4;
+        result[0] = 0xc4;
+        result[1] = 0x82;
+        result[2] = length >> 8;
+        result[3] = length;
   
-    for(let i = 0; i < fileNames.length; i++) {
-      if (appletObj[fileNames[i]]) {
-        result.set(appletObj[fileNames[i]], offset);
-        offset += appletObj[fileNames[i]].byteLength;
-      }
-    }
+        for(let i = 0; i < fileNames.length; i++) {
+            if (appletObj[fileNames[i]]) {
+                result.set(appletObj[fileNames[i]], offset);
+                offset += appletObj[fileNames[i]].byteLength;
+            }
+        }
 
-    this.fullData = result;
+        this.fullData = result;
+    } catch(err: any) {
+        throw(`Error: ${err}`)
+    }
   }
 
   blocksCount() : number {

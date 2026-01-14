@@ -1,6 +1,6 @@
-import { BERTLV } from "./ber-tlv"
-import { Constants } from "./constants"
-import { CryptoUtils } from "./crypto-utils"
+import { BERTLV } from "./ber-tlv.ts"
+import { Constants } from "./constants.ts"
+import { CryptoUtils } from "./crypto-utils.ts"
 
 const TLV_PUB_DATA = 0x82;
 

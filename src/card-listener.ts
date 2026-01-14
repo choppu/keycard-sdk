@@ -1,4 +1,4 @@
-import { CardChannel } from "./card-channel"
+import { CardChannel } from "./card-channel.ts"
 
 export interface CardListener {
   onConnected: (channel: CardChannel) => void;
