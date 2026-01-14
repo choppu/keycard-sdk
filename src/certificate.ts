@@ -4,7 +4,6 @@ import { Constants } from "./constants";
 import { CryptoUtils } from "./crypto-utils";
 import { RecoverableSignature } from "./recoverable-signature";
 import * as secp from '@noble/secp256k1';
-import {default  as CryptoJS} from "crypto-js"
 import { sha256 } from '@noble/hashes/sha2'
 import { hmac } from '@noble/hashes/hmac';
 import { RecoverableSignatureProps } from "./types/recoverable-signature-types";
@@ -49,7 +48,7 @@ export class Certificate extends RecoverableSignature {
       let s = certData.subarray(65, 97);
       let recId = certData[97];
 
-      let hash = CryptoUtils.wordArrayToByteArray(CryptoJS.SHA256(pubKey as any));
+      let hash = sha256(pubKey);
       let caPub = this.recoverFromSignature(recId, hash, r, s, true);
 
       let cert = new Certificate(caPub, true, r, s, recId);

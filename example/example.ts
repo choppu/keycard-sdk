@@ -1,5 +1,5 @@
 import { Keycard } from "../src/index"
-import { RecoverableSignatureOptions } from "../src/recoverable-signature";
+import { RecoverableSignatureProps } from "../src/types/recoverable-signature-types";
 
 const pcsclite = require('@nonth/pcsclite');
 const pcsc = pcsclite();
@@ -102,13 +102,13 @@ function createChannel(): any {
                 console.log("Wallet address: " + hx(walletPublicKey.toEthereumAddress()));
 
                 let hash = Keycard.CryptoUtils.stringToUint8Array("thiscouldbeahashintheorysoitisok");
-                let signature = new Keycard.RecoverableSignature({hash: hash, tlvData: (await cmdSet.sign(hash)).checkOK().data} as RecoverableSignatureOptions);
+                let signature = new Keycard.RecoverableSignature({hash: hash, tlvData: (await cmdSet.sign(hash)).checkOK().data} as RecoverableSignatureProps);
 
                 console.log("Signed hash: " + hx(hash));
                 console.log("Recovery ID: " + signature.recId);
                 console.log("Rec address: " + hx(signature.getEthereumAddress()));
-                console.log("R: " + hx(signature.r));
-                console.log("S: " + hx(signature.s));
+                console.log("R: " + hx(signature.r!));
+                console.log("S: " + hx(signature.s!));
 
                 console.log("Unpair");
                 await cmdSet.autoUnpair();

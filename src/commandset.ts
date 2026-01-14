@@ -8,7 +8,8 @@ import { CryptoUtils } from "./crypto-utils"
 import { BIP32KeyPair } from "./bip32key"
 import { KeyPath } from "./key-path"
 import { Constants } from "./constants"
-import {default  as CryptoJS} from "crypto-js"
+import { pbkdf2 } from "@noble/hashes/pbkdf2"
+import { sha256 } from "@noble/hashes/sha2"
 
 const INS_INIT = 0xfe;
 const INS_GET_STATUS = 0xf2;
@@ -97,11 +98,9 @@ export class Commandset {
   pairingPasswordToSecret(pairingPassword: string) : Uint8Array {
     let salt = "Keycard Pairing Password Salt";
     let iterationCount = 50000;
-    let kSize = 256 / 32;
-    let PBKDF2WordArr = CryptoJS.PBKDF2(pairingPassword, salt, {keySize: kSize, iterations: iterationCount, hasher: CryptoJS.algo.SHA256});
-    let PBKDF2Bytes = CryptoUtils.wordArrayToByteArray(PBKDF2WordArr);
+    let kSize = 32;
 
-    return PBKDF2Bytes;
+    return pbkdf2(sha256, pairingPassword, salt, { c: iterationCount, dkLen: kSize });
   }
 
   async autoPair(pairingData: string | Uint8Array) : Promise<void> {

@@ -2,7 +2,8 @@ import { CryptoUtils } from "./crypto-utils"
 import { BERTLV } from "./ber-tlv"
 import { Ethereum } from "./ethereum"
 import * as secp from '@noble/secp256k1';
-import {default  as CryptoJS} from "crypto-js"
+import { hmac } from "@noble/hashes/hmac";
+import { sha512 } from "@noble/hashes/sha2";
 
 const TLV_KEY_TEMPLATE = 0xA1;
 const TLV_PUB_KEY = 0x80;
@@ -38,11 +39,8 @@ export class BIP32KeyPair {
   }
 
   public static fromBinarySeed(binarySeed: Uint8Array) : BIP32KeyPair {
-    let binarySeedWordArr = CryptoJS.lib.WordArray.create(binarySeed);
     let key = CryptoUtils.stringToUint8Array("Bitcoin seed");
-    let keyWArray = CryptoJS.lib.WordArray.create(key);
-    let wordArr = CryptoJS.HmacSHA512(binarySeedWordArr, keyWArray);
-    let mac = CryptoUtils.wordArrayToByteArray(wordArr);
+    let mac = hmac(sha512, key, binarySeed);
 
     return new BIP32KeyPair(mac.subarray(0, 32), mac.subarray(32), null);
   }

@@ -1,8 +1,6 @@
 const JSZip = require("jszip");
 
 const BLOCK_SIZE = 247;
-const CLA = 0x80;
-const INS = 0xe8;
 const fileNames = ["Header.cap", "Directory.cap", "Import.cap", "Applet.cap", "Class.cap", "Method.cap", "StaticField.cap", "Export.cap", "ConstantPool.cap", "RefLocation.cap"];
 
 let zip = new JSZip();

@@ -26,7 +26,7 @@ export class WrongPINException extends APDUException {
 }
 
 export class CardIOError extends Error {
-  constructor(err: any) {
+  constructor(err: Error) {
     super("CardIO Error: " + err);
   }
 }

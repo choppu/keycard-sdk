@@ -1,5 +1,4 @@
-import {default  as CryptoJS} from "crypto-js"
-import { CryptoUtils } from "./crypto-utils";
+import {toBase64, fromBase64} from '@jsonjoy.com/base64';
 
 export class Pairing {
   pairingKey: Uint8Array;
@@ -15,8 +14,7 @@ export class Pairing {
   }
 
   static fromString(base64Str: string) : Pairing {
-    let wordArr = CryptoJS.enc.Base64.parse(base64Str);
-    let bytes = CryptoUtils.wordArrayToByteArray(wordArr);
+    let bytes = fromBase64(base64Str);
     return this.fromBytes(bytes);
   }
 
@@ -28,7 +26,6 @@ export class Pairing {
   }
 
   toBase64() : string {
-    let wordArray = CryptoJS.lib.WordArray.create(this.toByteArray());
-    return CryptoJS.enc.Base64.stringify(wordArray);
+    return toBase64(this.toByteArray());
   }
 }

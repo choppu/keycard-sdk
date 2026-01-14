@@ -32,9 +32,9 @@ export class GlobalPlatformCommandset {
 
     arr.push(0x80);
     arr.push(encrypted.byteLength);
-    arr.push.apply(arr, encrypted as any);
+    arr.push.apply(arr, [...encrypted]);
     arr.push(kcv.byteLength);
-    arr.push.apply(arr, kcv as any);
+    arr.push.apply(arr, [...kcv]);
   }
 
   putSCP02Keys(oldKvn: number, newKvn: number, encKey: Uint8Array, macKey = encKey, dekKey = encKey): Promise<APDUResponse> {

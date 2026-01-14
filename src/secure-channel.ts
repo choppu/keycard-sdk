@@ -6,6 +6,7 @@ import { CryptoUtils } from "./crypto-utils";
 import { APDUException } from "./apdu-exception";
 import * as secp from '@noble/secp256k1';
 import {default  as CryptoJS} from "crypto-js"
+import { sha256, sha512 } from "@noble/hashes/sha2";
 
 const SC_SECRET_LENGTH = 32;
 const SC_BLOCK_SIZE = 16;
@@ -48,11 +49,11 @@ export class SecureChannel {
   processOpenSecureChannelResponse(response: APDUResponse) : void {
     let data = response.data;
 
-    let hashBytes = CryptoJS.algo.SHA512.create();
-    hashBytes.update(CryptoJS.lib.WordArray.create(this.secret));
-    hashBytes.update(CryptoJS.lib.WordArray.create(this.pairing.pairingKey))
-    hashBytes.update(CryptoJS.lib.WordArray.create(data!.subarray(0, SC_SECRET_LENGTH)));
-    let keyData = CryptoUtils.wordArrayToByteArray(hashBytes.finalize());
+    let hashBytes = sha512.create();
+    hashBytes.update(this.secret);
+    hashBytes.update(this.pairing.pairingKey)
+    hashBytes.update(data.subarray(0, SC_SECRET_LENGTH));
+    let keyData = hashBytes.digest();
 
     this.iv = data!.subarray(SC_SECRET_LENGTH, data!.byteLength);
     this.sessionEncKey = keyData.subarray(0, SC_SECRET_LENGTH);
@@ -72,7 +73,7 @@ export class SecureChannel {
     let dataWArray = CryptoJS.lib.WordArray.create(data);
     let sessionEncKeyWArray = CryptoJS.lib.WordArray.create(this.sessionEncKey);
     let ivWArray = CryptoJS.lib.WordArray.create(this.iv);
-    let decData = CryptoJS.AES.decrypt({ciphertext: dataWArray} as any, sessionEncKeyWArray, {iv: ivWArray, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Iso97971});
+    let decData = CryptoJS.AES.decrypt({ciphertext: dataWArray} as CryptoJS.lib.CipherParams, sessionEncKeyWArray, {iv: ivWArray, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Iso97971});
     return CryptoUtils.wordArrayToByteArray(decData);
   }
 
@@ -166,28 +167,29 @@ export class SecureChannel {
     let cardChallenge = respData!.subarray(32, respData!.byteLength);
     let checkCryptogram;
 
-    let sha256Data = CryptoJS.algo.SHA256.create();
+    let sha256Data = sha256.create();
 
-    sha256Data.update(CryptoJS.lib.WordArray.create(sharedSecret));
-    sha256Data.update(CryptoJS.lib.WordArray.create(challenge));
-    checkCryptogram = CryptoUtils.wordArrayToByteArray(sha256Data.finalize());
+    sha256Data.update(sharedSecret);
+    sha256Data.update(challenge);
+    checkCryptogram = sha256Data.digest();
 
     if (!CryptoUtils.Uint8ArrayEqual(checkCryptogram, cardCryptogram)) {
       throw new APDUException(`Error: Invalid card cryptogram`);
     }
-    sha256Data.reset(); 
-    sha256Data.update(CryptoJS.lib.WordArray.create(sharedSecret));
-    sha256Data.update(CryptoJS.lib.WordArray.create(cardChallenge));
-    checkCryptogram = CryptoUtils.wordArrayToByteArray(sha256Data.finalize());
+
+    sha256Data = sha256.create(); 
+    sha256Data.update(sharedSecret);
+    sha256Data.update(cardChallenge);
+    checkCryptogram = sha256Data.digest();
 
     resp = await this.pair(apduChannel, PAIR_P1_LAST_STEP, checkCryptogram);
     resp.checkOK("Pairing failed on step 2");
     respData = resp.data;
 
-    sha256Data.reset();
-    sha256Data.update(CryptoJS.lib.WordArray.create(sharedSecret));
-    sha256Data.update(CryptoJS.lib.WordArray.create(respData!.subarray(1)));
-    let pKey = CryptoUtils.wordArrayToByteArray(sha256Data.finalize());
+    sha256Data = sha256.create();
+    sha256Data.update(sharedSecret);
+    sha256Data.update(respData!.subarray(1));
+    let pKey = sha256Data.digest();
 
     this.pairing = new Pairing(pKey, respData![0]);
   }
