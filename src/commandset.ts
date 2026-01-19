@@ -10,6 +10,7 @@ import { KeyPath } from "./key-path.ts"
 import { Constants } from "./constants.ts"
 import { pbkdf2 } from "@noble/hashes/pbkdf2"
 import { sha256 } from "@noble/hashes/sha2"
+import { Identifiers } from "./identifiers.ts"
 
 const INS_INIT = 0xfe;
 const INS_GET_STATUS = 0xf2;
@@ -49,8 +50,6 @@ const EXPORT_KEY_P1_DERIVE_AND_MAKE_CURRENT = 0x02;
 const EXPORT_KEY_P2_PRIVATE_AND_PUBLIC = 0x00;
 const EXPORT_KEY_P2_PUBLIC_ONLY = 0x01;
 
-const KEYCARD_AID = new Uint8Array([0xa0, 0x00, 0x00, 0x08, 0x04, 0x00, 0x01, 0x01, 0x01]);
-
 
 export class Commandset {
   apduChannel: CardChannel;
@@ -76,7 +75,7 @@ export class Commandset {
   }
 
   async select() : Promise<APDUResponse> {
-    let selectApplet = new APDUCommand(0x00, 0xa4, 4, 0, KEYCARD_AID);
+    let selectApplet = new APDUCommand(0x00, 0xa4, 4, 0, Identifiers.KEYCARD_AID);
     let resp = await this.apduChannel.send(selectApplet);
 
     if (resp.sw == 0x9000) {

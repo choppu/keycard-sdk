@@ -104,7 +104,7 @@ export class GlobalPlatformCommandset {
   }
 
   async loadKeycardPackage(cap: Uint8Array, cb: (loadedBlock: number, blockCount: number) => void): Promise<void> {
-    (await this.installForLoad(GlobalPlatformConstants.PACKAGE_AID)).checkOK();
+    (await this.installForLoad(Identifiers.PACKAGE_AID)).checkOK();
 
     let load = await Load.new(cap);
 
@@ -160,19 +160,19 @@ export class GlobalPlatformCommandset {
   }
 
   async installNDEFApplet(ndefRecord: Uint8Array) : Promise<APDUResponse> {
-    return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, GlobalPlatformConstants.NDEF_AID, GlobalPlatformConstants.NDEF_INSTANCE_AID, ndefRecord);
+    return this.installForInstall(Identifiers.PACKAGE_AID, Identifiers.NDEF_AID, Identifiers.NDEF_INSTANCE_AID, ndefRecord);
   }
 
   async installKeycardApplet(): Promise<APDUResponse> {
-    return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, GlobalPlatformConstants.KEYCARD_AID, GlobalPlatformConstants.KEYCARD_INSTANCE_ID, new Uint8Array(0));
+    return this.installForInstall(Identifiers.PACKAGE_AID, Identifiers.KEYCARD_AID, Identifiers.KEYCARD_INSTANCE_ID, new Uint8Array(0));
   }
 
   async installIdentApplet(): Promise<APDUResponse> {
-    return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, Identifiers.IDENT_AID, Identifiers.IDENT_INSTANCE_AID, new Uint8Array(0));
+    return this.installForInstall(Identifiers.PACKAGE_AID, Identifiers.IDENT_AID, Identifiers.IDENT_INSTANCE_AID, new Uint8Array(0));
   }
 
   async installCashApplet(cashData = new Uint8Array(0)): Promise<APDUResponse> {
-    return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, GlobalPlatformConstants.CASH_AID, GlobalPlatformConstants.CASH_INSTANCE_AID, cashData);
+    return this.installForInstall(Identifiers.PACKAGE_AID, Identifiers.CASH_AID, Identifiers.CASH_INSTANCE_AID, cashData);
   }
 
   async delete(aid: Uint8Array, p2?: number): Promise<APDUResponse> {
@@ -186,15 +186,15 @@ export class GlobalPlatformCommandset {
   }  
 
   async deleteKeycardInstance() : Promise<APDUResponse> {
-    return this.delete(GlobalPlatformConstants.KEYCARD_INSTANCE_ID);
+    return this.delete(Identifiers.KEYCARD_INSTANCE_ID);
   }
 
   async deleteCashInstance() : Promise<APDUResponse> {
-    return this.delete(GlobalPlatformConstants.CASH_INSTANCE_AID);
+    return this.delete(Identifiers.CASH_INSTANCE_AID);
   }
 
   async deleteNDEFInstance() : Promise<APDUResponse> {
-    return this.delete(GlobalPlatformConstants.NDEF_INSTANCE_AID);
+    return this.delete(Identifiers.NDEF_INSTANCE_AID);
   }
 
   async deleteIdentInstance() : Promise<APDUResponse> {
@@ -202,10 +202,10 @@ export class GlobalPlatformCommandset {
   }
 
   async deleteKeycardPackage() : Promise<APDUResponse> {
-    return this.delete(GlobalPlatformConstants.PACKAGE_AID);
+    return this.delete(Identifiers.PACKAGE_AID);
   }
 
   async deleteKeycardInstancesAndPackage() : Promise<void> {
-    (await this.delete(GlobalPlatformConstants.PACKAGE_AID, 0x80)).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
+    (await this.delete(Identifiers.PACKAGE_AID, 0x80)).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
   }
 }
