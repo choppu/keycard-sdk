@@ -75,7 +75,7 @@ export class Commandset {
   }
 
   async select() : Promise<APDUResponse> {
-    let selectApplet = new APDUCommand(0x00, 0xa4, 4, 0, Identifiers.KEYCARD_AID);
+    let selectApplet = new APDUCommand(0x00, 0xa4, 4, 0, Identifiers.INST_KEYCARD_AID);
     let resp = await this.apduChannel.send(selectApplet);
 
     if (resp.sw == 0x9000) {
