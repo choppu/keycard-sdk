@@ -175,15 +175,15 @@ export class GlobalPlatformCommandset {
     return this.installForInstall(GlobalPlatformConstants.PACKAGE_AID, GlobalPlatformConstants.CASH_AID, GlobalPlatformConstants.CASH_INSTANCE_AID, cashData);
   }
 
-  async delete(aid: Uint8Array): Promise<APDUResponse> {
+  async delete(aid: Uint8Array, p2?: number): Promise<APDUResponse> {
     let data = new Uint8Array(aid.byteLength + 2);
     data[0] = 0x4f;
     data[1] = aid.byteLength;
     data.set(aid, 2);
 
-    let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_DELETE, 0, 0, data);
+    let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_DELETE, 0, p2 || 0, data);
     return this.secureChannel.send(cmd);
-  }
+  }  
 
   async deleteKeycardInstance() : Promise<APDUResponse> {
     return this.delete(GlobalPlatformConstants.KEYCARD_INSTANCE_ID);
@@ -206,10 +206,6 @@ export class GlobalPlatformCommandset {
   }
 
   async deleteKeycardInstancesAndPackage() : Promise<void> {
-    (await this.deleteNDEFInstance()).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
-    (await this.deleteKeycardInstance()).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
-    (await this.deleteCashInstance()).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
-    (await this.deleteIdentInstance()).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
-    (await this.deleteKeycardPackage()).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
+    (await this.delete(GlobalPlatformConstants.PACKAGE_AID, 0x80)).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
   }
 }
