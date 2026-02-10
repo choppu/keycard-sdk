@@ -50,42 +50,26 @@ export namespace CryptoUtils {
   }
 
   //Add Iso97971 padding
-  export function addIso97971Padding(data: Uint8Array) : Uint8Array {
-    let l = data.length + 1;
-    
-    while(true) {
-      var remainder = l % 16;
-      if(remainder == 0) {
-        break;
-      } else {
-        l++;
-      }
-    }
-
-    let result = new Uint8Array(l);
-    result.set(data);
-    result[data.length] = 0x80;
-    
-    return result;
-  }
+  export function addIso97971Padding(data: Uint8Array): Uint8Array {
+  const blockSize = 16;
+  const paddedLength = Math.ceil((data.length + 1) / blockSize) * blockSize;
+  const result = new Uint8Array(paddedLength);
+  result.set(data);
+  result[data.length] = 0x80;
+  return result;
+}
 
   //Remove Iso97971 padding
-  export function removeIso97971Padding(data: Uint8Array) : Uint8Array {
-    let pad = data.length - 1;
-
-    while(true) {
-      if(data[pad] == 0x00) {
-        pad--;
-      } else if((data[pad] == 0x80)) {
-        break;
-      } else {
-        pad++;
-        break;
-      }
-    }
-
-    return data.subarray(0, pad);
+  export function removeIso97971Padding(data: Uint8Array): Uint8Array {
+  let pad = data.length - 1;
+  
+  while (pad >= 0 && data[pad] !== 0x80) {
+    pad--;
   }
+
+  return data.subarray(0, pad + 1);
+}
+
 
   export function aesDecrypt(data: Uint8Array, key: Uint8Array, iv: Uint8Array) : Uint8Array {
     let decData = cbc(key, iv, {disablePadding: true}).decrypt(data);
@@ -94,6 +78,6 @@ export namespace CryptoUtils {
 
   export function aesEncrypt(data: Uint8Array, key: Uint8Array, iv: Uint8Array, noPadding: boolean) {
     let dataToEncrypt = noPadding ? data : addIso97971Padding(data);
-    return cbc(key, iv, {disablePadding: noPadding}).encrypt(dataToEncrypt);
+    return cbc(key, iv, {disablePadding: true}).encrypt(dataToEncrypt);
   }
 }
