@@ -17,6 +17,7 @@ import { Constants } from "./constants.ts"
 import { Certificate } from "./certificate.ts"
 import { Identifiers } from "./identifiers.ts"
 import { IdentComandset } from "./ident-comandset.ts"
+import { PairingStorage } from "./pairing-storage.ts"
 import type * as RecoverableSignatureTypes from "./types/recoverable-signature-types.ts"
 
 export let Keycard = {
@@ -41,5 +42,5 @@ export let Keycard = {
   Identifiers: Identifiers
 }
 
-export { RecoverableSignatureTypes };
+export { RecoverableSignatureTypes, PairingStorage };
 export default Keycard;
