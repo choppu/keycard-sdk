@@ -42,14 +42,14 @@ export class Certificate extends RecoverableSignature {
     return Certificate.createCertificate(caPair, Certificate.generateIdentKeyPair());
   }
 
-  fromTLV(certData: Uint8Array): Certificate {
+  public static fromTLV(certData: Uint8Array): Certificate {
       let pubKey = certData.subarray(0, 33);
       let r = certData.subarray(33, 65);
       let s = certData.subarray(65, 97);
       let recId = certData[97];
 
       let hash = sha256(pubKey);
-      let caPub = this.recoverFromSignature(recId, hash, r, s, true);
+      let caPub = RecoverableSignature.recoverFromSignature(recId, hash, r, s, true);
 
       let cert = new Certificate(caPub, true, r, s, recId);
       cert.identPub = pubKey;
@@ -61,7 +61,7 @@ export class Certificate extends RecoverableSignature {
     let tlv = new BERTLV(tlvData);
     tlv.enterConstructed(Constants.TLV_SIGNATURE_TEMPLATE);
     let certData = tlv.readPrimitive(TLV_CERT);
-    let cert = this.fromTLV(certData);
+    let cert = Certificate.fromTLV(certData);
     let signature = tlv.peekUnread();
     let verified = secp.verify(signature, hash, cert.identPub, { prehash: false });
 
