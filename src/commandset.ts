@@ -309,19 +309,40 @@ export class Commandset {
     }
   }
 
-  //TODO: Add suport for Duress PIN
-  async init(pin: string, puk: string, sharedSecret: string | Uint8Array) : Promise<APDUResponse> {
+  async init(pin: string, puk: string, sharedSecret: string | Uint8Array, altPin?: string, pinRetry?: number, pukRetry?: number) : Promise<APDUResponse> {
+    let extLen = 0;
+    let altPinByteArr: Uint8Array | null = null;
+
     if (typeof sharedSecret === "string") {
       sharedSecret = this.pairingPasswordToSecret(sharedSecret);
     }
 
     let pinByteArr = CryptoUtils.stringToUint8Array(pin);
     let pukByteArr = CryptoUtils.stringToUint8Array(puk);
-    let initData = new Uint8Array(pinByteArr.byteLength + pukByteArr.byteLength + sharedSecret.byteLength);
+
+    let baseLen = pinByteArr.byteLength + pukByteArr.byteLength + sharedSecret.byteLength;
+
+    if(altPin) {
+      altPinByteArr = CryptoUtils.stringToUint8Array(altPin);
+      extLen = 2 + altPinByteArr.byteLength;
+    } else if(pinRetry || pukRetry) {
+      extLen = 2;
+    }
+
+    let initData = new Uint8Array(baseLen + extLen);
 
     initData.set(pinByteArr, 0);
     initData.set(pukByteArr, pinByteArr.byteLength);
     initData.set(sharedSecret, pinByteArr.byteLength + pukByteArr.byteLength);
+    
+    if(extLen > 0) {
+      initData[baseLen] = pinRetry ? pinRetry : 3;
+      initData[baseLen + 1] = pukRetry ? pukRetry : 5;
+    }
+
+    if(altPinByteArr) {
+      initData.set(altPinByteArr, baseLen + 2);
+    }
 
     let init = new APDUCommand(0x80, INS_INIT, 0, 0, this.secureChannel.oneShotEncrypt(initData));
     return this.apduChannel.send(init);

@@ -57,14 +57,22 @@ export class Certificate extends RecoverableSignature {
       return cert;
   }
 
-  verifyIdentity(hash: Uint8Array, tlvData: Uint8Array): Uint8Array {
+  public static verifyIdentity(hash: Uint8Array, tlvData: Uint8Array): Uint8Array {
     let tlv = new BERTLV(tlvData);
     tlv.enterConstructed(Constants.TLV_SIGNATURE_TEMPLATE);
     let certData = tlv.readPrimitive(TLV_CERT);
     let cert = Certificate.fromTLV(certData);
-    let signature = tlv.peekUnread();
-    let verified = secp.verify(signature, hash, cert.identPub, { prehash: false });
+    
+    tlv.enterConstructed(Constants.TLV_ECDSA_TEMPLATE);
 
+    const r = RecoverableSignature.toUInt(tlv.readPrimitive(Constants.TLV_INT));
+    const s = RecoverableSignature.toUInt(tlv.readPrimitive(Constants.TLV_INT));
+
+    const signature = new Uint8Array(64);
+    signature.set(r, 0);
+    signature.set(s, r.length);
+
+    let verified = secp.verify(signature, hash, cert.identPub, { prehash: false, lowS: false });
 
     if (!verified) {
       throw new Error("Error verifying signature.");

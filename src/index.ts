@@ -19,6 +19,7 @@ import { Identifiers } from "./identifiers.ts"
 import { IdentComandset } from "./ident-comandset.ts"
 import type * as RecoverableSignatureTypes from "./types/recoverable-signature-types.ts"
 import type { PairingStorage } from "./pairing-storage.ts"
+import { KeycardManager } from "./keycard-manager.ts"
 
 export let Keycard = {
   Commandset: Commandset,
@@ -39,7 +40,8 @@ export let Keycard = {
   Ethereum: Ethereum,
   CryptoUtils: CryptoUtils,
   Constants: Constants,
-  Identifiers: Identifiers
+  Identifiers: Identifiers,
+  KeycardManager: KeycardManager
 }
 
 export { RecoverableSignatureTypes, PairingStorage };
