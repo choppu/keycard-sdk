@@ -50,6 +50,7 @@ const EXPORT_KEY_P1_DERIVE_AND_MAKE_CURRENT = 0x02;
 
 const EXPORT_KEY_P2_PRIVATE_AND_PUBLIC = 0x00;
 const EXPORT_KEY_P2_PUBLIC_ONLY = 0x01;
+const EXPORT_KEY_P2_EXTENDED_PUBLIC = 0x02;
 
 const FACTORY_RESET_P1_MAGIC = 0xaa;
 const FACTORY_RESET_P2_MAGIC = 0x55;
@@ -263,6 +264,15 @@ export class Commandset {
   }
 
   async exportKey(derivationOptions: number, publicOnly: boolean, keypath: string | Uint8Array, makeCurrent?: boolean, source?: number) : Promise<APDUResponse> {
+    let p2 = publicOnly ? EXPORT_KEY_P2_PUBLIC_ONLY : EXPORT_KEY_P2_PRIVATE_AND_PUBLIC;
+    return this.exportKeyWrapper(p2, derivationOptions, keypath, makeCurrent, source);
+  }
+
+  async exportExtendedKey(derivationOptions: number, keypath: string | Uint8Array, makeCurrent?: boolean, source?: number) : Promise<APDUResponse> {
+    return this.exportKeyWrapper(EXPORT_KEY_P2_EXTENDED_PUBLIC, derivationOptions, keypath, makeCurrent, source);
+  }
+
+  private async exportKeyWrapper(p2: number, derivationOptions: number, keypath: string | Uint8Array, makeCurrent?: boolean, source?: number) : Promise<APDUResponse> {
     if(typeof keypath === "string") {
       let path = new KeyPath(keypath);
       keypath = path.data;
@@ -273,10 +283,10 @@ export class Commandset {
       derivationOptions = source | (makeCurrent ? EXPORT_KEY_P1_DERIVE_AND_MAKE_CURRENT : EXPORT_KEY_P1_DERIVE);
     }
 
-    let p2 = publicOnly ? EXPORT_KEY_P2_PUBLIC_ONLY : EXPORT_KEY_P2_PRIVATE_AND_PUBLIC;
     let exportKey = this.secureChannel.protectedCommand(0x80, INS_EXPORT_KEY, derivationOptions, p2, keypath);
     return this.secureChannel.transmit(this.apduChannel, exportKey);
   }
+
 
   async exportCurrentKey(publicOnly: boolean) : Promise<APDUResponse> {
     return this.exportKey(EXPORT_KEY_P1_CURRENT, publicOnly, new Uint8Array(0));
