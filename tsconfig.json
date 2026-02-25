@@ -18,7 +18,8 @@
     "noUnusedLocals": true,
     "downlevelIteration": true,
     "allowImportingTsExtensions": true,
-    "rewriteRelativeImportExtensions": true
+    "rewriteRelativeImportExtensions": true,
+    "isolatedModules": true
   },
   "ts-node": {
     "esm": true,
