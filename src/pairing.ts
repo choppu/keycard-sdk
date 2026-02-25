@@ -1,3 +1,4 @@
+import { Base64 } from 'js-base64';
 export class Pairing {
   pairingKey: Uint8Array;
   pairingIndex: number;
@@ -12,7 +13,7 @@ export class Pairing {
   }
 
   static fromString(base64Str: string) : Pairing {
-    let bytes = Buffer.from(base64Str, 'base64');
+    let bytes = Base64.toUint8Array(base64Str);
     return this.fromBytes(bytes);
   }
 
@@ -24,6 +25,6 @@ export class Pairing {
   }
 
   toBase64() : string {
-    return Buffer.from(this.toByteArray()).toString('base64');
+    return Base64.fromUint8Array((this.toByteArray()));
   }
 }
