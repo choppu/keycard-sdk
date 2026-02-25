@@ -135,12 +135,17 @@ export class SecureChannel {
   }
 
   async autoOpenSecureChannel(apduChannel: CardChannel) : Promise<void> {
-   let response = await this.openSecureChannel(apduChannel, this.pairing.pairingIndex, this.publicKey);
-    this.processOpenSecureChannelResponse(response);
+    try {
+      let response = (await this.openSecureChannel(apduChannel, this.pairing.pairingIndex, this.publicKey));
+      response.checkOK(`Open Secure Channel cmd failed. Error code: ${response.sw}`);
+      this.processOpenSecureChannelResponse(response);
     
-    response = await this.mutuallyAuthenticate(apduChannel);
-    response.checkOK("MUTUALLY AUTHENTICATE failed");
-    this.verifyMutuallyAuthenticateResponse(response);
+      response = await this.mutuallyAuthenticate(apduChannel);
+      response.checkOK("MUTUALLY AUTHENTICATE failed");
+      this.verifyMutuallyAuthenticateResponse(response);
+    } catch(err: any) {
+      throw (err);
+    }  
   }
 
   async autoPair(apduChannel: CardChannel, sharedSecret: Uint8Array) : Promise<void> {

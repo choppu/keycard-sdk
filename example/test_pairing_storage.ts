@@ -23,8 +23,7 @@ export class TestStorage implements PairingStorage {
     return new Promise((resolve,reject) => {
       try {
         let uid = TestStorage.hx(instanceUID);
-        let result = this.storage[uid];
-        resolve(result);
+        resolve(this.storage[uid]);
       } catch(err: any) {
         reject(err);
       } 

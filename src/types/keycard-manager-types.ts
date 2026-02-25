@@ -17,10 +17,13 @@ export type KeycardManagerResponse = {
   data: any;
 }
 
-export type KeycardManagerErrorData = {
-  type: number;
-  message: string;
+export type KeycardManagerResponseData = {
+  type?: number;
+  message?: string;
   cardInfo: ApplicationInfo;
   cardAuthentic?: boolean;
   paired?: boolean;
+  pinRetry?: number;
+  pukRetry?: number;
+  cbFuncResponse?: any;
 }
