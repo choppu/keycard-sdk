@@ -287,7 +287,6 @@ export class Commandset {
     return this.secureChannel.transmit(this.apduChannel, exportKey);
   }
 
-
   async exportCurrentKey(publicOnly: boolean) : Promise<APDUResponse> {
     return this.exportKey(EXPORT_KEY_P1_CURRENT, publicOnly, new Uint8Array(0));
   }
