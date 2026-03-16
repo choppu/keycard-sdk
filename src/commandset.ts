@@ -164,7 +164,11 @@ export class Commandset {
     return this.changePIN(CryptoUtils.stringToUint8Array(puk), CHANGE_PIN_P1_PUK);
   }
 
-  async changePairingPassword(pairingPassword: Uint8Array) : Promise<APDUResponse> {
+  async changePairingPassword(pairingPassword: string | Uint8Array) : Promise<APDUResponse> {
+    if(typeof pairingPassword === 'string') {
+      pairingPassword = this.pairingPasswordToSecret(pairingPassword);
+    }
+
     return this.changePIN(pairingPassword, CHANGE_PIN_P1_PAIRING_SECRET);
   }
 
