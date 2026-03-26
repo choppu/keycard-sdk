@@ -149,7 +149,7 @@ export class KeycardManager  {
           respData.cardInfo = applicationInfo;
           this.emitter.emit("card-initialized", respData);
         } catch (err: any) {
-          throw new KManagerError(`Card initialization error. ${err}.`, applicationInfo);
+          throw new KManagerError(`Card initialization error. ${err}.`, respData);
         }
       }
 
@@ -167,7 +167,7 @@ export class KeycardManager  {
         respData.cardAuthentic = cardAuthentic;
 
         if (!cardAuthentic) {
-          throw new KManagerError('Card is not authentic.', { data: respData });
+          throw new KManagerError('Card is not authentic.', respData);
         }
 
         this.emitter.emit("card-authentic", respData);
@@ -184,7 +184,7 @@ export class KeycardManager  {
           }
           this.emitter.emit("card-paired", respData);
         } catch (err: any) {
-          throw new KManagerError(`Card pairing error. ${err}`, { data: respData });
+          throw new KManagerError(`Card pairing error. ${err}`, respData);
         }
       }
 
@@ -221,10 +221,10 @@ export class KeycardManager  {
             cmdSet.setPairing(Pairing.fromString(pairing!));
             (await cmdSet.autoOpenSecureChannel());
           } else {
-            throw new KManagerError(`Error opening secure channel. ${err}`, { data: respData });
+            throw new KManagerError(`Error opening secure channel. ${err}`, respData);
           }
         } else {
-          throw new KManagerError(`Error opening secure channel. ${err}`, { data: respData });
+          throw new KManagerError(`Error opening secure channel. ${err}`, respData);
         }
       }
 
@@ -250,7 +250,7 @@ export class KeycardManager  {
           respData.pinRetry = pinRetry;
         }
 
-        throw new KManagerError(`Error verifying PIN. ${err}`, { data: respData });
+        throw new KManagerError(`Error verifying PIN. ${err}`, respData);
       }
 
       if (state == PAIRED) {
@@ -259,7 +259,7 @@ export class KeycardManager  {
           this.emitter.emit("cmd-executed", respData);
           return { status: 'success', data: respData };
         } catch (err: any) {
-          throw new KManagerError(`Error executing callback function. ${err}`, { data: respData });
+          throw new KManagerError(`Error executing callback function. ${err}`, respData);
         }
       } else if (state == LOADED) {
         keyLoaded = new ApplicationStatus((await cmdSet.getStatus(Constants.GET_STATUS_P1_APPLICATION)).checkOK().data).hasMasterKey;
@@ -276,7 +276,7 @@ export class KeycardManager  {
             (await cmdSet.loadBIP32KeyPair(keyPair)).checkOK();
             keyLoaded = true;
           } catch (err: any) {
-            throw new KManagerError(`Error loading key. ${err}`, { data: respData });
+            throw new KManagerError(`Error loading key. ${err}`, respData);
 
           }
         }
@@ -286,7 +286,7 @@ export class KeycardManager  {
           this.emitter.emit("cmd-executed", respData);
           return { status: 'success', data: respData };
         } catch (err: any) {
-          throw new KManagerError(`Error executing callback function. ${err}`, { data: respData });
+          throw new KManagerError(`Error executing callback function. ${err}`, respData);
         }
       }
 
