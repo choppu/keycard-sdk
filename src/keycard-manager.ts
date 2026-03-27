@@ -23,6 +23,8 @@ export const CardLoadKeyError = 0xca13;
 export const CardAuthenticationError = 0xcaa4;
 export const CardPinVerificationError = 0xca91;
 export const CardRequiredStateError = 0xca83;
+export const CardCmdExecutionError = 0xc095;
+
 
 export const defaultPairingPassword = new Uint8Array([
   0x67, 0x5d, 0xea, 0xbb, 0x0d, 0x7c, 0x72, 0x4b,
@@ -32,11 +34,13 @@ export const defaultPairingPassword = new Uint8Array([
 ]);
 
 export class KManagerError extends Error {
+  errorCode: number;
   cardData: any;
 
-  constructor(message: string, data: any) {
+  constructor(message: string, errorCode: number, data: any) {
     super(message);
     this.cardData = data;
+    this.errorCode = errorCode;
   }
 }
 
@@ -149,7 +153,7 @@ export class KeycardManager  {
           respData.cardInfo = applicationInfo;
           this.emitter.emit("card-initialized", respData);
         } catch (err: any) {
-          throw new KManagerError(`Card initialization error. ${err}.`, respData);
+          throw new KManagerError(`Card initialization error. ${err}.`, CardInitializeError, respData);
         }
       }
 
@@ -167,7 +171,7 @@ export class KeycardManager  {
         respData.cardAuthentic = cardAuthentic;
 
         if (!cardAuthentic) {
-          throw new KManagerError('Card is not authentic.', respData);
+          throw new KManagerError('Card is not authentic.', CardAuthenticationError, respData);
         }
 
         this.emitter.emit("card-authentic", respData);
@@ -184,7 +188,7 @@ export class KeycardManager  {
           }
           this.emitter.emit("card-paired", respData);
         } catch (err: any) {
-          throw new KManagerError(`Card pairing error. ${err}`, respData);
+          throw new KManagerError(`Card pairing error. ${err}`, CardPairingError, respData);
         }
       }
 
@@ -221,10 +225,10 @@ export class KeycardManager  {
             cmdSet.setPairing(Pairing.fromString(pairing!));
             (await cmdSet.autoOpenSecureChannel());
           } else {
-            throw new KManagerError(`Error opening secure channel. ${err}`, respData);
+            throw new KManagerError(`Error opening secure channel. ${err}`, CardPairingError, respData);
           }
         } else {
-          throw new KManagerError(`Error opening secure channel. ${err}`, respData);
+          throw new KManagerError(`Error opening secure channel. ${err}`, CardPairingError, respData);
         }
       }
 
@@ -250,7 +254,7 @@ export class KeycardManager  {
           respData.pinRetry = pinRetry;
         }
 
-        throw new KManagerError(`Error verifying PIN. ${err}`, respData);
+        throw new KManagerError(`Error verifying PIN. ${err}`, CardPinVerificationError, respData);
       }
 
       if (state == PAIRED) {
@@ -259,7 +263,7 @@ export class KeycardManager  {
           this.emitter.emit("cmd-executed", respData);
           return { status: 'success', data: respData };
         } catch (err: any) {
-          throw new KManagerError(`Error executing callback function. ${err}`, respData);
+          throw new KManagerError(`Error executing callback function. ${err}`, CardCmdExecutionError, respData);
         }
       } else if (state == LOADED) {
         keyLoaded = new ApplicationStatus((await cmdSet.getStatus(Constants.GET_STATUS_P1_APPLICATION)).checkOK().data).hasMasterKey;
@@ -276,7 +280,7 @@ export class KeycardManager  {
             (await cmdSet.loadBIP32KeyPair(keyPair)).checkOK();
             keyLoaded = true;
           } catch (err: any) {
-            throw new KManagerError(`Error loading key. ${err}`, respData);
+            throw new KManagerError(`Error loading key. ${err}`, CardLoadKeyError, respData);
 
           }
         }
@@ -286,7 +290,7 @@ export class KeycardManager  {
           this.emitter.emit("cmd-executed", respData);
           return { status: 'success', data: respData };
         } catch (err: any) {
-          throw new KManagerError(`Error executing callback function. ${err}`, respData);
+          throw new KManagerError(`Error executing callback function. ${err}`, CardCmdExecutionError, respData);
         }
       }
 
