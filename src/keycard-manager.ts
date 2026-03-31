@@ -6,7 +6,7 @@ import { KeycardManagerArgs, KeycardManagerResponse, KeycardManagerResponseData 
 import { PairingStorage } from './pairing-storage.ts';
 import { CryptoUtils } from './crypto-utils.ts';
 import { Certificate } from './certificate.ts';
-import { APDUException, WrongPINException } from './apdu-exception.ts';
+import { APDUException, CardIOError, WrongPINException } from './apdu-exception.ts';
 import { Pairing } from './pairing.ts';
 import { ApplicationStatus } from './application-status.ts';
 import { Constants } from './constants.ts';
@@ -171,7 +171,7 @@ export class KeycardManager  {
         respData.cardAuthentic = cardAuthentic;
 
         if (!cardAuthentic) {
-          throw new KManagerError('Card is not authentic.', CardAuthenticationError, respData);
+          throw new KManagerError('Card is not authentic. ${err}.', CardAuthenticationError, respData);
         }
 
         this.emitter.emit("card-authentic", respData);
@@ -203,7 +203,9 @@ export class KeycardManager  {
         (await cmdSet.autoOpenSecureChannel());
         this.emitter.emit("secure-channel-opened", respData);
       } catch (err: any) {
-        await this.pairingStorage.deletePairing(applicationInfo.instanceUID);
+        if(!(err instanceof CardIOError)) {
+          await this.pairingStorage.deletePairing(applicationInfo.instanceUID);
+        }
 
         if (!args.skipVerificationUID || !args.cardPublicKeys) {
           respData.type = CardAuthenticationError;
