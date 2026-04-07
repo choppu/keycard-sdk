@@ -1,6 +1,6 @@
 {
   "name": "keycard-sdk",
-  "version": "3.1.6",
+  "version": "3.1.7",
   "description": "Keycard Typescript SDK",
   "type": "module",
   "main": "dist/index.js",
