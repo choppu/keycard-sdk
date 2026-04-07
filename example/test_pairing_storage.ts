@@ -1,4 +1,5 @@
-import { PairingStorage } from "../src";
+import { Buffer } from "buffer";
+import type { PairingStorage } from "../dist/pairing-storage.js";
 
 export class TestStorage implements PairingStorage {
   storage: { [key: string]: string } = {};
@@ -15,7 +16,7 @@ export class TestStorage implements PairingStorage {
         resolve();
       } catch(err: any) {
         reject(err);
-      } 
+      }
     });
   }
 

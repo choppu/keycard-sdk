@@ -19,10 +19,11 @@
     "@noble/ciphers": "^1.3.0",
     "@noble/hashes": "^1.8.0",
     "@noble/secp256k1": "^3.0.0",
+    "@scure/bip32": "^2.0.1",
     "crypto-js": "^4.2.0",
     "js-base64": "^3.7.8",
     "jszip": "^3.10.1",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.2"
   },
   "optionalDependencies": {
     "@nonth/pcsclite": "^0.6.2"
@@ -31,9 +32,10 @@
     "@jest/globals": "^30.3.0",
     "@types/crypto-js": "^4.2.2",
     "@types/jest": "^30.0.0",
-    "@types/node": "^25.0.7",
+    "@types/node": "^25.5.2",
+    "buffer": "^6.0.3",
     "jest": "^30.3.0",
-    "ts-jest": "^29.4.6",
+    "ts-jest": "^29.4.9",
     "ts-node": "^10.9.2"
   }
 }

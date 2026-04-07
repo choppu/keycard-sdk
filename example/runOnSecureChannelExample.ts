@@ -1,12 +1,13 @@
-import { Keycard } from "../src/index"
+import { Keycard } from "../dist/index.js"
 import pcsclite from "@nonth/pcsclite";
+import { TestStorage } from "./test_pairing_storage.ts";
+import { KManagerError, LOADED, PAIRED } from "../dist/keycard-manager.js";
+import { Constants } from "../dist/constants.js";
+import { Mnemonic } from "../dist/mnemonic.js";
+import { Commandset } from "../dist/commandset.js";
+import type { KeycardManagerResponse, KeycardManagerResponseData } from "../dist/types/keycard-manager-types.js";
+import { Buffer } from "buffer";
 import process from "process";
-import { TestStorage } from "./test_pairing_storage";
-import { KManagerError, LOADED, PAIRED } from "../src/keycard-manager";
-import { Constants } from "../src/constants";
-import { Mnemonic } from "../src/mnemonic";
-import { Commandset } from "../src/commandset";
-import { KeycardManagerResponse, KeycardManagerResponseData } from "../src/types/keycard-manager-types";
 
 const pcsc = pcsclite();
 

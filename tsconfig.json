@@ -16,14 +16,10 @@
     "noImplicitReturns": true,
     "noUncheckedIndexedAccess": false,
     "noUnusedLocals": true,
-    "downlevelIteration": true,
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
-    "isolatedModules": true
-  },
-  "ts-node": {
-    "esm": true,
-    "experimentalSpecifierResolution": "node"
+    "isolatedModules": true,
+    "types": ["node", "jest"]
   },
   "include": [
     "src/**/*.ts"

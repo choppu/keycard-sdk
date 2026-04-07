@@ -4,29 +4,36 @@ import { Ethereum } from "./ethereum.ts"
 import * as secp from '@noble/secp256k1';
 import { hmac } from "@noble/hashes/hmac";
 import { sha512 } from "@noble/hashes/sha2";
+import { HDKey } from "@scure/bip32";
 
 const TLV_KEY_TEMPLATE = 0xA1;
 const TLV_PUB_KEY = 0x80;
 const TLV_PRIV_KEY = 0x81;
 const TLV_CHAIN_CODE = 0x82;
 
+type ParsedTLV = {
+  privateKey: Uint8Array;
+  publicKey: Uint8Array;
+  chainCode: Uint8Array;
+}
+
 export class BIP32KeyPair {
   privateKey: Uint8Array;
   publicKey!: Uint8Array;
   chainCode: Uint8Array;
 
-  calculatePublicKey() : void {
+  calculatePublicKey(): void {
     this.publicKey = secp.getPublicKey(this.privateKey, false);
   }
 
   constructor(privateKey: Uint8Array, chainCode: Uint8Array, publicKey: Uint8Array | null) {
-    if (privateKey == null && (chainCode != null || publicKey == null))  {
-      throw new Error ("Error: Private key can be null only if the public key is not null and the chain code is null");
+    if (privateKey == null && (chainCode != null || publicKey == null)) {
+      throw new Error("Error: Private key can be null only if the public key is not null and the chain code is null");
     }
-    
+
     this.privateKey = privateKey;
     this.chainCode = chainCode;
-    
+
     if (publicKey != null) {
       this.publicKey = publicKey;
     } else {
@@ -34,54 +41,71 @@ export class BIP32KeyPair {
     }
   }
 
-  isExtended() : boolean {
+  isExtended(): boolean {
     return this.chainCode != null;
   }
 
-  public static fromBinarySeed(binarySeed: Uint8Array) : BIP32KeyPair {
+  public static fromBinarySeed(binarySeed: Uint8Array): BIP32KeyPair {
     let key = CryptoUtils.stringToUint8Array("Bitcoin seed");
     let mac = hmac(sha512, key, binarySeed);
 
     return new BIP32KeyPair(mac.subarray(0, 32), mac.subarray(32), null);
   }
 
-  public static fromTLV(tlvData: Uint8Array) : BIP32KeyPair {
+  public static fromTLV(tlvData: Uint8Array): ParsedTLV {
     try {
-        let tlv = new BERTLV(tlvData);
-        tlv.enterConstructed(TLV_KEY_TEMPLATE);
+      let tlv = new BERTLV(tlvData);
+      tlv.enterConstructed(TLV_KEY_TEMPLATE);
 
-        let pubKey, privKey, chainCode: Uint8Array;
-        let tag = tlv.readTag();
+      let pubKey, privKey, chainCode: Uint8Array;
+      let tag = tlv.readTag();
 
-        if (tag == TLV_PUB_KEY) {
-            tlv.unreadLastTag();
-            pubKey = tlv.readPrimitive(TLV_PUB_KEY);
-            tag = tlv.readTag();
-        }
+      if (tag == TLV_PUB_KEY) {
+        tlv.unreadLastTag();
+        pubKey = tlv.readPrimitive(TLV_PUB_KEY);
+        tag = tlv.readTag();
+      }
 
-        if (tag == TLV_PRIV_KEY) {
-            tlv.unreadLastTag();
-            privKey = tlv.readPrimitive(TLV_PRIV_KEY);
-            tag = tlv.readTag();
+      if (tag == TLV_PRIV_KEY) {
+        tlv.unreadLastTag();
+        privKey = tlv.readPrimitive(TLV_PRIV_KEY);
+        tag = tlv.readTag();
+      }
 
-            if (tag == TLV_CHAIN_CODE) {
-                tlv.unreadLastTag();
-                chainCode = tlv.readPrimitive(TLV_CHAIN_CODE);
-            }
-        }
-        
-        return new BIP32KeyPair(privKey!, chainCode!, pubKey!);
+      if (tag == TLV_CHAIN_CODE) {
+        tlv.unreadLastTag();
+        chainCode = tlv.readPrimitive(TLV_CHAIN_CODE);
+      }
 
-    } catch(err: any) {
-        throw("Error generating keypair");
+      return { privateKey: privKey!, chainCode: chainCode!, publicKey: pubKey! };
+
+    } catch (err: any) {
+      throw ("Error generating keypair");
     }
   }
 
-  toTLV(includePublic = true) : Uint8Array {
+  public static bip32KeyPair(tlvData: Uint8Array): BIP32KeyPair {
+    const data = this.fromTLV(tlvData);
+    return new BIP32KeyPair(data.privateKey, data.chainCode, data.publicKey);
+  }
+
+  public static extendedKey(tlvData: Uint8Array): HDKey {
+    const data = this.fromTLV(tlvData);
+    const x = data.publicKey.subarray(1, 33);
+    const yLastByte = data.publicKey[data.publicKey.byteLength - 1];
+    const prefix = (yLastByte & 1) === 0 ? 0x02 : 0x03;
+    const compressedPubKey = new Uint8Array(33);
+    compressedPubKey[0] = prefix;
+    compressedPubKey.set(x, 1);
+
+    return new HDKey({ publicKey: compressedPubKey, chainCode: data.chainCode });
+  }
+
+  toTLV(includePublic = true): Uint8Array {
     let privLen = this.privateKey.byteLength;
     let privOff = 0;
 
-    if(this.privateKey[0] == 0x00) {
+    if (this.privateKey[0] == 0x00) {
       privOff++;
       privLen--;
     }
@@ -128,11 +152,11 @@ export class BIP32KeyPair {
     return data;
   }
 
-  toEthereumAddress() : Uint8Array {
+  toEthereumAddress(): Uint8Array {
     return Ethereum.toEthereumAddress(this.publicKey);
   }
 
-  isPublicOnly() : boolean {
+  isPublicOnly(): boolean {
     return this.privateKey == null;
   }
 }
