@@ -22,6 +22,7 @@ import type { PairingStorage } from "./pairing-storage.ts"
 import { KeycardManager } from "./keycard-manager.ts"
 import KeycardEventEmitter from "./keycard-event-emitter.ts"
 import type { Callback, Subscription } from "./types/keycard-event-emitter-types.ts"
+import type { ParsedTLV } from "./types/bip32.ts"
 
 export let Keycard = {
   Commandset: Commandset,
@@ -47,5 +48,5 @@ export let Keycard = {
   KeycardEventEmitter: KeycardEventEmitter
 }
 
-export { RecoverableSignatureTypes, PairingStorage, Callback, Subscription };
+export { RecoverableSignatureTypes, PairingStorage, Callback, Subscription, ParsedTLV };
 export default Keycard;

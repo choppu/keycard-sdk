@@ -5,17 +5,12 @@ import * as secp from '@noble/secp256k1';
 import { hmac } from "@noble/hashes/hmac";
 import { sha512 } from "@noble/hashes/sha2";
 import { HDKey } from "@scure/bip32";
+import { ParsedTLV } from "./types/bip32.ts";
 
 const TLV_KEY_TEMPLATE = 0xA1;
 const TLV_PUB_KEY = 0x80;
 const TLV_PRIV_KEY = 0x81;
 const TLV_CHAIN_CODE = 0x82;
-
-type ParsedTLV = {
-  privateKey: Uint8Array;
-  publicKey: Uint8Array;
-  chainCode: Uint8Array;
-}
 
 export class BIP32KeyPair {
   privateKey: Uint8Array;
@@ -91,14 +86,8 @@ export class BIP32KeyPair {
 
   public static extendedKey(tlvData: Uint8Array): HDKey {
     const data = this.fromTLV(tlvData);
-    const x = data.publicKey.subarray(1, 33);
-    const yLastByte = data.publicKey[data.publicKey.byteLength - 1];
-    const prefix = (yLastByte & 1) === 0 ? 0x02 : 0x03;
-    const compressedPubKey = new Uint8Array(33);
-    compressedPubKey[0] = prefix;
-    compressedPubKey.set(x, 1);
-
-    return new HDKey({ publicKey: compressedPubKey, chainCode: data.chainCode });
+    const pubKeyCompressed = CryptoUtils.compressPublicKey(data.publicKey);
+    return new HDKey({ publicKey: pubKeyCompressed, chainCode: data.chainCode });
   }
 
   toTLV(includePublic = true): Uint8Array {
