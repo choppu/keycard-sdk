@@ -11,6 +11,7 @@
     "prepare": "npm run build",
     "clean": "rm -rf dist",
     "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "example": "npm run prepare && node example/example.ts && node example/runOnSecureChannelExample.ts",
     "publish": "npm run clean && npm run build && npm publish --access=public"
   },
   "author": "Ksenia Balistreri",
