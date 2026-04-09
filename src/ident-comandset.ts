@@ -4,10 +4,10 @@ import { CardChannel } from "./card-channel.ts";
 import { Constants } from "./constants.ts";
 import { Identifiers } from "./identifiers.ts";
 
-export class IdentComandset {
+export class IdentCommandset {
   apduChannel!: CardChannel;
 
-  constructot(apduChannel: CardChannel) {
+  constructor(apduChannel: CardChannel) {
     this.apduChannel = apduChannel;
   }
 
@@ -21,3 +21,5 @@ export class IdentComandset {
     return this.apduChannel.send(sign);
   }
 }
+
+export { IdentCommandset as IdentComandset };

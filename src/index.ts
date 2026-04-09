@@ -16,7 +16,7 @@ import { CryptoUtils } from "./crypto-utils.ts"
 import { Constants } from "./constants.ts"
 import { Certificate } from "./certificate.ts"
 import { Identifiers } from "./identifiers.ts"
-import { IdentComandset } from "./ident-comandset.ts"
+import { IdentCommandset, IdentComandset } from "./ident-comandset.ts"
 import type * as RecoverableSignatureTypes from "./types/recoverable-signature-types.ts"
 import type { PairingStorage } from "./pairing-storage.ts"
 import { KeycardManager } from "./keycard-manager.ts"
@@ -26,6 +26,7 @@ import type { ParsedTLV } from "./types/bip32.ts"
 
 export let Keycard = {
   Commandset: Commandset,
+  IdentCommandset: IdentCommandset,
   IdentComandset: IdentComandset,
   Pairing: Pairing,
   ApplicationInfo: ApplicationInfo,
