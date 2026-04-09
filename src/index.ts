@@ -27,7 +27,7 @@ import type { ParsedTLV } from "./types/bip32.ts"
 export let Keycard = {
   Commandset: Commandset,
   IdentCommandset: IdentCommandset,
-  IdentComandset: IdentComandset,
+  IdentComandset: IdentCommandset,
   Pairing: Pairing,
   ApplicationInfo: ApplicationInfo,
   ApplicationStatus: ApplicationStatus,
