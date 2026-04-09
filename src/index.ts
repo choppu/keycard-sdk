@@ -11,6 +11,7 @@ import { Ethereum } from "./ethereum.ts"
 import { KeyPath } from "./key-path.ts"
 import { Mnemonic } from "./mnemonic.ts"
 import { RecoverableSignature } from "./recoverable-signature.ts"
+import { Signature } from "./signature.ts"
 import { PCSCCardChannel } from "./pcsc-card-channel.ts"
 import { CryptoUtils } from "./crypto-utils.ts"
 import { Constants } from "./constants.ts"
@@ -38,6 +39,7 @@ export let Keycard = {
   KeyPath: KeyPath,
   Mnemonic: Mnemonic,
   RecoverableSignature: RecoverableSignature,
+  Signature: Signature,
   Certificate: Certificate,
   PCSCCardChannel: PCSCCardChannel,
   Ethereum: Ethereum,
@@ -48,5 +50,5 @@ export let Keycard = {
   KeycardEventEmitter: KeycardEventEmitter
 }
 
-export { RecoverableSignatureTypes, PairingStorage, Callback, Subscription, ParsedTLV };
+export { Signature, RecoverableSignatureTypes, PairingStorage, Callback, Subscription, ParsedTLV };
 export default Keycard;
