@@ -171,7 +171,7 @@ export class KeycardManager  {
         respData.cardAuthentic = cardAuthentic;
 
         if (!cardAuthentic) {
-          throw new KManagerError('Card is not authentic. ${err}.', CardAuthenticationError, respData);
+          throw new KManagerError('Card is not authentic.', CardAuthenticationError, respData);
         }
 
         this.emitter.emit("card-authentic", respData);
