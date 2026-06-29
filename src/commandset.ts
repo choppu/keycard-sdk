@@ -1,5 +1,4 @@
 import { CardChannel } from "./card-channel.ts"
-import { SecureChannel } from "./secure-channel.ts"
 import { ApplicationInfo } from "./application-info.ts"
 import { Pairing } from "./pairing.ts"
 import { APDUResponse } from "./apdu-response.ts"
@@ -11,6 +10,8 @@ import { Constants } from "./constants.ts"
 import { pbkdf2 } from "@noble/hashes/pbkdf2"
 import { sha256 } from "@noble/hashes/sha2"
 import { Identifiers } from "./identifiers.ts"
+import { SecureChannelV2 } from "./secure-channel-v2.ts"
+import { SecureChannelV1 } from "./secure-channel-v1.ts"
 
 const INS_INIT = 0xfe;
 const INS_GET_STATUS = 0xf2;
@@ -55,24 +56,49 @@ const EXPORT_KEY_P2_EXTENDED_PUBLIC = 0x02;
 const FACTORY_RESET_P1_MAGIC = 0xaa;
 const FACTORY_RESET_P2_MAGIC = 0x55;
 
+const DEFAULT_CA_PUBLIC_KEY = new Uint8Array([ 
+  0x02, 0x9a, 0xb9, 0x9e, 0xe1, 0xe7, 0xa7, 0x1b, 0xdf, 
+  0x45, 0xb3, 0xf9, 0xc5, 0x8c, 0x99, 0x86, 0x6f, 0xf1, 
+  0x29, 0x4d, 0x2c, 0x1e, 0x30, 0x4e, 0x22, 0x8a, 0x86, 
+  0xe1, 0x0c, 0x33, 0x43, 0x50, 0x1c
+]);
+
 
 export class Commandset {
-  apduChannel: CardChannel;
-  secureChannel: SecureChannel;
-  applicationInfo: ApplicationInfo | null;
+  apduChannel!: CardChannel;
+  secureChannel!: SecureChannelV1 | SecureChannelV2;
+  applicationInfo!: ApplicationInfo | null;
+  caPublicKeys!: Uint8Array[];
+  whitelistedCardPublicKeys!: Uint8Array[];
 
-  constructor(channel: CardChannel) {
-    this.apduChannel = channel;
-    this.secureChannel = new SecureChannel();
-    this.applicationInfo = null;
+  constructor(channel: CardChannel, caPublicKey?: Uint8Array) {
+    const cardPubKey = caPublicKey ? caPublicKey: DEFAULT_CA_PUBLIC_KEY;
+    this.createSecureChannel(channel, [cardPubKey], [] as Uint8Array[]);
   }
 
-  setSecureChannel(secureChannel: SecureChannel) : void {
+  private createSecureChannel(channel: CardChannel, caPublicKeys: Uint8Array[], whitelistedCardPublicKeys: Uint8Array[]) : void {
+    if (caPublicKeys == null) {
+      throw new Error("caPublicKeys must not be null");
+    }
+    if (whitelistedCardPublicKeys == null) {
+      throw new Error("whitelistedCardPublicKeys must not be null");
+    }
+    this.apduChannel = channel;
+    this.caPublicKeys = caPublicKeys;
+    this.whitelistedCardPublicKeys = whitelistedCardPublicKeys;
+    this.secureChannel = new SecureChannelV2(caPublicKeys, whitelistedCardPublicKeys);
+  }
+
+  private isSecureChannelV2(appInfo: ApplicationInfo) : boolean {
+    return appInfo.appVersion >= 0x0400;
+  }
+
+  setSecureChannel(secureChannel: SecureChannelV1 | SecureChannelV2) : void {
     this.secureChannel = secureChannel;
   }
 
-  getPairing() : Pairing {
-    return this.secureChannel.pairing!;
+  getPairing() : Pairing | null {
+    return this.secureChannel.getPairing();
   }
 
   setPairing(pairing: Pairing) : void {
@@ -87,8 +113,13 @@ export class Commandset {
       this.applicationInfo = new ApplicationInfo(resp.data!);
 
       if (this.applicationInfo.hasSecureChannelCapability()) {
-        this.secureChannel.generateSecret(this.applicationInfo.secureChannelPubKey);
-        this.secureChannel.reset();
+        if (this.isSecureChannelV2(this.applicationInfo)) {
+          this.secureChannel =  new SecureChannelV2(this.caPublicKeys, this.whitelistedCardPublicKeys);
+          this.secureChannel.setCardCertificate(this.applicationInfo.certificateData);
+        } else {
+          this.secureChannel = new SecureChannelV1();
+          (this.secureChannel as SecureChannelV1).generateSecret(this.applicationInfo.secureChannelPubKey);
+        }
       }
     }
 

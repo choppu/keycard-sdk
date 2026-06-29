@@ -82,4 +82,17 @@ export namespace CryptoUtils {
     let dataToEncrypt = noPadding ? data : addIso97971Padding(data);
     return cbc(key, iv, {disablePadding: true}).encrypt(dataToEncrypt);
   }
+
+  export function constantTimeCompare(a: Uint8Array, b: Uint8Array): boolean {
+    if (a.length !== b.length) {
+      return false;
+    }
+
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+      result |= a[i] ^ b[i];
+    }
+
+    return result === 0;
+  }
 }

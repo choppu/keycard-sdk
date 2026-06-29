@@ -8,7 +8,7 @@ import { sha256 } from '@noble/hashes/sha2'
 import { hmac } from '@noble/hashes/hmac';
 import { RecoverableSignatureProps } from "./types/recoverable-signature-types.ts";
 
-const TLV_CERT = 0x8a;
+export const TLV_CERT = 0x8a;
 
 secp.hashes.sha256 = sha256;
 secp.hashes.hmacSha256 = (key, msg) => hmac(sha256, key, msg);
