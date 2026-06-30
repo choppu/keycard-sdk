@@ -13,6 +13,8 @@ const CAPABILITY_SECURE_CHANNEL = 0x01;
 const CAPABILITY_KEY_MANAGEMENT = 0x02;
 const CAPABILITY_CREDENTIALS_MANAGEMENT = 0x04;
 const CAPABILITY_NDEF = 0x08;
+const CAPABILITY_FACTORY_RESET = 0x10;
+
 
 const CAPABILITIES_ALL = CAPABILITY_SECURE_CHANNEL | CAPABILITY_KEY_MANAGEMENT | CAPABILITY_CREDENTIALS_MANAGEMENT | CAPABILITY_NDEF;
 
@@ -96,6 +98,14 @@ export class ApplicationInfo {
     return CryptoUtils.getAppVersionString(this.appVersion);
   }
 
+  getPINRetries() : number{
+    if (this.appVersion < 0x0400) {
+      return -1;
+    }
+
+    return this.appStatus & 0x0f;
+  }
+
   hasSecureChannelCapability() : boolean {
     return (this.capabilities & CAPABILITY_SECURE_CHANNEL) == CAPABILITY_SECURE_CHANNEL;
   }
@@ -110,5 +120,13 @@ export class ApplicationInfo {
 
   hasNDEFCapability() : boolean {
     return (this.capabilities & CAPABILITY_NDEF) == CAPABILITY_NDEF;
+  }
+
+  hasFactoryResetCapability() : boolean {
+    return (this.capabilities & CAPABILITY_FACTORY_RESET) == CAPABILITY_FACTORY_RESET;
+  }
+
+  isLEEMode() : boolean{
+    return (this.appStatus & APP_STATUS_LEE_MODE) == APP_STATUS_LEE_MODE;
   }
 }

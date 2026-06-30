@@ -61,7 +61,7 @@ export class SecureChannelV2 implements SecureChannel {
     }
   }
 
-  processHandshakeResponse(salt: Uint8Array, clientEphPriv: Uint8Array, cardResponse: Uint8Array) : void {
+  async processHandshakeResponse(salt: Uint8Array, clientEphPriv: Uint8Array, cardResponse: Uint8Array) : Promise<void> {
     // Parse card response: card_eph_pub (65B) || sig (DER, variable)
     if (cardResponse.length < PUBKEY_SIZE + 2) {
       throw new APDUException("Invalid handshake response: too short");
@@ -82,7 +82,7 @@ export class SecureChannelV2 implements SecureChannel {
 
     // Verify card's ECDSA signature over transcript
     // transcript = hkdf_salt || client_eph_pub || card_eph_pub
-    this.verifyCardSignature(salt, this.clientEphPub!, cardEphPub, signature);
+    await this.verifyCardSignature(salt, this.clientEphPub!, cardEphPub, signature);
 
     // Initialize nonce counter to zero
     this.nonceCounter = new Uint8Array(CCM_NONCE_SIZE);
@@ -123,11 +123,11 @@ export class SecureChannelV2 implements SecureChannel {
 
     // Build inner APDU: CLA | INS | P1 | P2 | LC | data
     const innerAPDU = new Uint8Array(data.length + 5);
-    innerAPDU[0] = cla & 0xFF;
-    innerAPDU[1] = ins & 0xFF;
-    innerAPDU[2] = p1 & 0xFF;
-    innerAPDU[3] = p2 & 0xFF;
-    innerAPDU[4] = data.length & 0xFF;
+    innerAPDU[0] = cla & 0xff;
+    innerAPDU[1] = ins & 0xff;
+    innerAPDU[2] = p1 & 0xff;
+    innerAPDU[3] = p2 & 0xff;
+    innerAPDU[4] = data.length & 0xff;
     innerAPDU.set(data, 5);
 
     const aesCCM = new AESCCM(this.keyH2C!);
@@ -214,6 +214,7 @@ export class SecureChannelV2 implements SecureChannel {
       hashBytes.update(salt);
       hashBytes.update(clientPub);
       hashBytes.update(cardPub);
+
       let keyData = hashBytes.digest();
 
       if (this.cardIdentPub == null) {
@@ -223,7 +224,7 @@ export class SecureChannelV2 implements SecureChannel {
       if (!(await secp.verifyAsync(signature, keyData, cardPub))) {
         throw new APDUException("Card authentication failed: invalid signature");
       }
-    } catch (err: any ) {
+    } catch (err: any) {
       throw new Error(err);
     }
   }
