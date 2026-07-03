@@ -13,6 +13,7 @@ import { Constants } from './constants.ts';
 import { BIP32KeyPair } from './bip32key.ts';
 import { Mnemonic } from './mnemonic.ts';
 import KeycardEventEmitter from './keycard-event-emitter.ts';
+import { WhitelistedPubKeysStorage } from './whitelisted-cards-storage.ts';
 
 export const PAIRED = 0;
 export const SECURE_CHANNEL_OPENED = 0;
@@ -48,11 +49,16 @@ export class KManagerError extends Error {
 
 export class KeycardManager  {
   pairingStorage: PairingStorage;
+  whitelistedPKStorage: WhitelistedPubKeysStorage | undefined;
   emitter: KeycardEventEmitter;
 
-  constructor(storage: PairingStorage) {
+  constructor(pairingStorage: PairingStorage, whitelistedPKStorage?: WhitelistedPubKeysStorage) {
     this.emitter = new KeycardEventEmitter();
-    this.pairingStorage = storage;
+    this.pairingStorage = pairingStorage;
+
+    if(whitelistedPKStorage) {
+      this.whitelistedPKStorage = whitelistedPKStorage;
+    }
   }
 
   private generatePIN(): string {
@@ -126,8 +132,10 @@ export class KeycardManager  {
 
     let sessionPairingPassword: string | Uint8Array = defaultPairingPassword;
 
+    const whitelistedPubKeys = this.whitelistedPKStorage ? (await this.whitelistedPKStorage?.getWhitelistedPubKeys()) : undefined;
+
     try {
-      let cmdSet = new Commandset(channel, args.caPublicKeys);
+      let cmdSet = new Commandset(channel, args.caPublicKeys, whitelistedPubKeys);
       let applicationInfo = new ApplicationInfo((await cmdSet.select()).checkOK().data);
       let respData: KeycardManagerResponseData = {} as KeycardManagerResponseData;
 
@@ -239,6 +247,12 @@ export class KeycardManager  {
       } else {
         try {
           await cmdSet.autoOpenSecureChannel();
+
+          if(this.whitelistedPKStorage) {
+            const cert = Certificate.fromTLV(applicationInfo.certificateData);
+            this.whitelistedPKStorage.addPubKeyToWhitelisted(cert.identPub);
+          }
+
         } catch(err: any) {
           throw new KManagerError(`Error opening secure channel. ${err}`, CardSecureChannelError, respData);
         }

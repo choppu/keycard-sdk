@@ -6,7 +6,7 @@ import process from "process";
 
 const pcsc = pcsclite();
 
-const cardPubKey = new Uint8Array([
+const caPubKey = new Uint8Array([
   0x02, 0x58, 0x77, 0x22, 0x0a, 0xaa, 0xe6, 0xe5,
   0x4a, 0x6f, 0x97, 0x46, 0x02, 0xd5, 0x99, 0x5c,
   0x0f, 0xe2, 0x4a, 0x3e, 0xa7, 0xdd, 0xab, 0xd8,
@@ -39,7 +39,7 @@ function createChannel(): any {
 
           try {
             let channel = new Keycard.PCSCCardChannel(reader, protocol);
-            let cmdSet = new Keycard.Commandset(channel, cardPubKey) as any;
+            let cmdSet = new Keycard.Commandset(channel, [caPubKey]) as any;
 
             if (cmdSet) {
               console.log("Selecting card");

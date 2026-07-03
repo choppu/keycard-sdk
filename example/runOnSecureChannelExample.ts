@@ -8,6 +8,7 @@ import { Commandset } from "../dist/commandset.js";
 import type { KeycardManagerResponse, KeycardManagerResponseData } from "../dist/types/keycard-manager-types.js";
 import { Buffer } from "buffer";
 import process from "process";
+import { TestWhitelistedPubKeysStorage } from "./test_whitelisted_pubkeys_storage.ts";
 
 const pcsc = pcsclite();
 
@@ -35,11 +36,12 @@ function createChannel(): any {
           }
 
           try {
-            let channel = new Keycard.PCSCCardChannel(reader, protocol);
-            let pairingStorage = new TestStorage();
+            const channel = new Keycard.PCSCCardChannel(reader, protocol);
+            const pairingStorage = new TestStorage();
+            const whitelistedPubKeysStorage  = new TestWhitelistedPubKeysStorage();
 
             if (channel) {
-              const keycardManager = new Keycard.KeycardManager(pairingStorage);
+              const keycardManager = new Keycard.KeycardManager(pairingStorage, whitelistedPubKeysStorage);
               const devCAKey = new Uint8Array([0x02, 0x58, 0x77, 0x22, 0x0a, 0xaa, 0xe6, 0xe5, 0x4a, 0x6f, 0x97, 0x46, 0x02, 0xd5, 0x99, 0x5c, 0x0f, 0xe2, 0x4a, 0x3e, 0xa7, 0xdd, 0xab, 0xd8, 0x64, 0x4b, 0xec, 0x79, 0x5b, 0x9d, 0xa0, 0x07, 0x43]);
               const authCert = new Uint8Array([0x02, 0x9a, 0xb9, 0x9e, 0xe1, 0xe7, 0xa7, 0x1b, 0xdf, 0x45, 0xb3, 0xf9, 0xc5, 0x8c, 0x99, 0x86, 0x6f, 0xf1, 0x29, 0x4d, 0x2c, 0x1e, 0x30, 0x4e, 0x22, 0x8a, 0x86, 0xe1, 0x0c, 0x33, 0x43, 0x50, 0x1c]);
               const transactionData = new Uint8Array([0xf8, 0x6c, 0x80, 0x85, 0x04, 0xe3, 0xb2, 0x92, 0x00, 0x82, 0x52, 0x4c, 0x94, 0xc3, 0x90, 0xcc, 0x49, 0xa3, 0x27, 0x36, 0xa5, 0x87, 0x33, 0xcf, 0x46, 0xbe, 0x42, 0xf7, 0x34, 0xdd, 0x4f, 0x53, 0xcb, 0x88, 0x0d, 0xe0, 0xb6, 0xb3, 0xa7, 0x64, 0x00, 0x00, 0x01, 0x25, 0xa0, 0x5a, 0xb2, 0xf4, 0x8b, 0xdc, 0x67, 0x52, 0x19, 0x14, 0x40, 0xce, 0x62, 0x08, 0x8b, 0x9e, 0x42, 0xf2, 0x02, 0x15, 0xee, 0x43, 0x05, 0x40, 0x35, 0x79, 0xaa, 0x2e]); 
@@ -81,7 +83,7 @@ function createChannel(): any {
               response = await keycardManager.runOnSecureChannel(
                 channel,
                 PAIRED,
-                { pin: '123456', skipVerificationUID: [], caPublicKeys: [authCert, devCAKey] },
+                { pin: '123456', skipVerificationUID: [], caPublicKeys: [authCert] },
                 async (cmdSet: Commandset) => {
                   if(cmdSet.applicationInfo!.appVersion < 0x0400) {
                     await cmdSet.autoUnpair();
@@ -95,7 +97,7 @@ function createChannel(): any {
               response = await keycardManager.runOnSecureChannel(
                 channel,
                 PAIRED,
-                { pin: '123456', skipVerificationUID: [cardInfo.instanceUID], caPublicKeys: [authCert, devCAKey] },
+                { pin: '123456', skipVerificationUID: [cardInfo.instanceUID], caPublicKeys: [authCert] },
                 async (cmdSet: Commandset) => {
                   const resp = (await cmdSet.loadBIP32KeyPair(mn.toBIP32KeyPair())).checkOK();
 
@@ -115,7 +117,7 @@ function createChannel(): any {
               response = await keycardManager.runOnSecureChannel(
                 channel,
                 LOADED,
-                { pin: '123456', pairingPassword: 'KeycardDefaultPairing', skipVerificationUID: [cardInfo.instanceUID], caPublicKeys: [authCert, devCAKey] },
+                { pin: '123456', pairingPassword: 'KeycardDefaultPairing', skipVerificationUID: [cardInfo.instanceUID], caPublicKeys: [authCert] },
                 async (cmdSet: Commandset) => {
                   let resp = (await cmdSet.signWithPath(transactionData, "m", false)).checkOK();
                   if(cmdSet.applicationInfo!.appVersion < 0x0400) {
