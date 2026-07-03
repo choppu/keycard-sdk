@@ -25,7 +25,7 @@ const INS_SECURED_APDU = 0x18;
 
 export class SecureChannelV2 implements SecureChannel {
   cardIdentPub!: Uint8Array | null;
-  cardPublicKeys: Uint8Array[];
+  caPublicKeys: Uint8Array[];
   whitelistedCardPublicKeys: Uint8Array[];
   nonceCounter: Uint8Array;
   open: boolean;
@@ -34,7 +34,7 @@ export class SecureChannelV2 implements SecureChannel {
   private keyC2H!: Uint8Array | null;
 
   constructor(caPublicKeys: Uint8Array[], whitelistedCardPublicKeys: Uint8Array[]) {
-    this.cardPublicKeys = caPublicKeys;
+    this.caPublicKeys = caPublicKeys;
     this.whitelistedCardPublicKeys = whitelistedCardPublicKeys;
     this.nonceCounter = new Uint8Array(CCM_NONCE_SIZE);
     this.open = false;
@@ -71,7 +71,7 @@ export class SecureChannelV2 implements SecureChannel {
     const signature = cardResponse.subarray(PUBKEY_SIZE);
 
     // ECDH key agreement
-    const sharedSecret = secp.getSharedSecret(clientEphPriv, cardEphPub);
+    const sharedSecret = secp.getSharedSecret(clientEphPriv, cardEphPub).subarray(1);
 
     // HKDF-SHA256 key derivation
     const okm = hkdf(sha256, sharedSecret, salt, PROTOCOL_LABEL, OKM_SIZE);
@@ -198,8 +198,8 @@ export class SecureChannelV2 implements SecureChannel {
   }
 
   isCardTrusted(caPub: Uint8Array) : boolean {
-    for (let i = 0; i <  this.cardPublicKeys.length; i++) {
-      if (CryptoUtils.Uint8ArrayEqual(this.cardPublicKeys[i], caPub)) {
+    for (let i = 0; i <  this.caPublicKeys.length; i++) {
+      if (CryptoUtils.Uint8ArrayEqual(this.caPublicKeys[i], caPub)) {
         return true;
       }
     }

@@ -84,9 +84,10 @@ export class Commandset {
   caPublicKeys!: Uint8Array[];
   whitelistedCardPublicKeys!: Uint8Array[];
 
-  constructor(channel: CardChannel, caPublicKey?: Uint8Array) {
-    const cardPubKey = caPublicKey ? caPublicKey: DEFAULT_CA_PUBLIC_KEY;
-    this.createSecureChannel(channel, [cardPubKey], [] as Uint8Array[]);
+  constructor(channel: CardChannel, caPublicKeys?: Uint8Array[], whitelistedCaPubKey?: Uint8Array[]) {
+    const cardPubKey = caPublicKeys ? caPublicKeys: [DEFAULT_CA_PUBLIC_KEY];
+    const wCardPubKeys = whitelistedCaPubKey ? whitelistedCaPubKey : [] as Uint8Array[];
+    this.createSecureChannel(channel, cardPubKey, wCardPubKeys);
   }
 
   private createSecureChannel(channel: CardChannel, caPublicKeys: Uint8Array[], whitelistedCardPublicKeys: Uint8Array[]) : void {

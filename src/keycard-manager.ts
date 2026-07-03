@@ -15,6 +15,7 @@ import { Mnemonic } from './mnemonic.ts';
 import KeycardEventEmitter from './keycard-event-emitter.ts';
 
 export const PAIRED = 0;
+export const SECURE_CHANNEL_OPENED = 0;
 export const LOADED = 1;
 
 export const CardInitializeError = 0xca17;
@@ -64,8 +65,8 @@ export class KeycardManager  {
     return (parseInt(hexStr, 16)).toString().substring(0, 12);
   }
 
-  private async verifyAuthenticity(cmdSet: Commandset, instanceUID: Uint8Array, skipVerificationUID: Uint8Array[], cardPubKeys: Uint8Array[]): Promise<boolean> {
-    if (cardPubKeys.length == 0 && skipVerificationUID.map(uid => uid == instanceUID)) {
+  private async verifyAuthenticity(cmdSet: Commandset, instanceUID: Uint8Array, skipVerificationUID: Uint8Array[], caPublicKeys: Uint8Array[]): Promise<boolean> {
+    if (caPublicKeys.length == 0 && skipVerificationUID.map(uid => uid == instanceUID)) {
       return true;
     }
 
@@ -78,9 +79,9 @@ export class KeycardManager  {
         return false;
       }
 
-      if (cardPubKeys) {
-        for (let i = 0; i < cardPubKeys.length; i++) {
-          if (CryptoUtils.Uint8ArrayEqual(cardPubKeys[i], cardPubKey)) {
+      if (caPublicKeys) {
+        for (let i = 0; i < caPublicKeys.length; i++) {
+          if (CryptoUtils.Uint8ArrayEqual(caPublicKeys[i], cardPubKey)) {
             return true;
           }
         }
@@ -126,7 +127,7 @@ export class KeycardManager  {
     let sessionPairingPassword: string | Uint8Array = defaultPairingPassword;
 
     try {
-      let cmdSet = new Commandset(channel);
+      let cmdSet = new Commandset(channel, args.caPublicKeys);
       let applicationInfo = new ApplicationInfo((await cmdSet.select()).checkOK().data);
       let respData: KeycardManagerResponseData = {} as KeycardManagerResponseData;
 
@@ -163,13 +164,13 @@ export class KeycardManager  {
         respData.paired = paired;
 
         if (!paired) {
-          if (!args.skipVerificationUID || !args.cardPublicKeys) {
+          if (!args.skipVerificationUID || !args.caPublicKeys) {
             respData.type = CardAuthenticationError;
             respData.message = "Error: Card authentication failed. skipVerificationUID and/or cardPublicKeys are missing.";
             return { status: 'error', data: respData };
           }
 
-          cardAuthentic = await this.verifyAuthenticity(cmdSet, applicationInfo.instanceUID, args.skipVerificationUID!, args.cardPublicKeys!);
+          cardAuthentic = await this.verifyAuthenticity(cmdSet, applicationInfo.instanceUID, args.skipVerificationUID!, args.caPublicKeys!);
           respData.cardAuthentic = cardAuthentic;
 
           if (!cardAuthentic) {
@@ -209,13 +210,13 @@ export class KeycardManager  {
             await this.pairingStorage.deletePairing(applicationInfo.instanceUID);
           }
 
-          if (!args.skipVerificationUID || !args.cardPublicKeys) {
+          if (!args.skipVerificationUID || !args.caPublicKeys) {
             respData.type = CardAuthenticationError;
             respData.message = "Error opening secure channel. Card authentication failed. skipVerificationUID and/or cardPublicKeys are missing.";
             return { status: 'error', data: respData };
           }
 
-          cardAuthentic = await this.verifyAuthenticity(cmdSet, applicationInfo.instanceUID, args.skipVerificationUID!, args.cardPublicKeys!);
+          cardAuthentic = await this.verifyAuthenticity(cmdSet, applicationInfo.instanceUID, args.skipVerificationUID!, args.caPublicKeys!);
 
           if (cardAuthentic) {
             let r = await this.tryAutoPair(sessionPairingPassword, cmdSet, this.pairingStorage, applicationInfo.instanceUID);
@@ -268,7 +269,7 @@ export class KeycardManager  {
         throw new KManagerError(`Error verifying PIN. ${err}`, CardPinVerificationError, respData);
       }
 
-      if (state == PAIRED) {
+      if (state == PAIRED || SECURE_CHANNEL_OPENED) {
         try {
           respData.cbFuncResponse = await cbFunc(cmdSet);
           this.emitter.emit("cmd-executed", respData);

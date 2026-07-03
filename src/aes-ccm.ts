@@ -46,13 +46,15 @@ export class AESCCM {
     // Step 1: Compute the authentication tag using CBC-MAC (over plaintext)
     const mac = this.computeCBCMAC(data, nonce, q);
 
+    const m = new Uint8Array(16);
+    m.set(mac, 0);
+    const dataWithMac = concatBytes(m, data);
+
     // Step 2: Encrypt using CTR mode
-    const ciphertext = ctr(this.encKey, ctrNonce).encrypt(data);
-
-    // Return ciphertext || tag (concat first, then clean sensitive data)
-    const result = concatBytes(ciphertext, mac);
-
-    console.log(result);
+    const ciph = ctr(this.encKey, ctrNonce).encrypt(dataWithMac);
+    const encMac = ciph.subarray(0, 8);
+    const cipher = ciph.subarray(16);
+    const result = concatBytes(cipher, encMac);
 
     clean(mac);
     return result;
@@ -78,22 +80,29 @@ export class AESCCM {
     ctrNonce[0] = CTR_FLAGS_Q2;
     ctrNonce.set(nonce, 1);
 
+    const m = new Uint8Array(16);
+    m.set(mac, 0);
+
+    const dataWithMac = concatBytes(m, ct);
+
     this.validateNonce(nonce.length, ct.length);
 
     const q = BLOCK_SIZE - 1 - nonce.length;
 
     // Step 1: Decrypt using CTR mode (CTR decrypt = CTR encrypt)
-    const plaintext = ctr(this.encKey, ctrNonce).decrypt(ct);
+    const decrypted = ctr(this.encKey, ctrNonce).decrypt(dataWithMac);
+    const decMac = decrypted.subarray(0, 8);
+    const plaintext = decrypted.subarray(16);
 
     // Step 2: Verify the authentication tag using CBC-MAC (over plaintext)
-    // In CCM, the MAC is computed over the plaintext, so we must decrypt first
     const computedMac = this.computeCBCMAC(plaintext, nonce, q);
 
     // Constant-time comparison to prevent timing attacks
-    if (!CryptoUtils.constantTimeCompare(computedMac, mac)) {
+    if (!CryptoUtils.constantTimeCompare(computedMac, decMac)) {
       clean(computedMac);
       throw new Error('AES-CCM: authentication failed');
     }
+
     clean(computedMac);
 
     return plaintext;
@@ -114,8 +123,6 @@ export class AESCCM {
     if (data.length > 0) {
       blocks.push(...this.formatData(data));
     }
-
-    console.log(blocks);
 
     // Compute CBC-MAC over all blocks
     let mac = new Uint8Array(BLOCK_SIZE);

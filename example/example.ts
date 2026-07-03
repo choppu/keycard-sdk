@@ -108,18 +108,6 @@ function createChannel(): any {
                 (await cmdSet.loadBIP32KeyPair(mnemonic.toBIP32KeyPair())).checkOK();
               }
 
-              let currentPath = new Keycard.KeyPath((await cmdSet.getStatus(Keycard.Constants.GET_STATUS_P1_KEY_PATH)).checkOK().data);
-              console.log("Current key path: " + currentPath);
-
-              if (!(currentPath.toString() === "m/44'/60'/0'/0/0")) {
-                (await cmdSet.deriveKey("m/44'/60'/0'/0/0")).checkOK();
-                console.log("Derived m/44'/60'/0'/0/0");
-              }
-
-              let walletPublicKey = Keycard.BIP32KeyPair.bip32KeyPair((await cmdSet.exportCurrentKey(true)).checkOK().data);
-              console.log("Wallet public key: " + hx(walletPublicKey.publicKey));
-              console.log("Wallet address: " + hx(walletPublicKey.toEthereumAddress()));
-
               let extendedKey = Keycard.BIP32KeyPair.extendedKey((await cmdSet.exportExtendedKey(0, "m/44'/60'/0'/0", false)).checkOK().data);
               console.log("Derived key 0: " + hx(extendedKey.deriveChild(0).publicKey!));
               console.log("Derived key 1: " + hx(extendedKey.deriveChild(1).publicKey!));
@@ -135,8 +123,10 @@ function createChannel(): any {
               console.log("R: " + hx(signature.r!));
               console.log("S: " + hx(signature.s!));
 
-              console.log("Unpair");
-              await cmdSet.autoUnpair();
+              if(cmdSet.applicationInfo.appVersion < 0x0400) {
+                console.log("Unpair");
+                await cmdSet.autoUnpair();
+              }
 
               process.exit(0);
             }
