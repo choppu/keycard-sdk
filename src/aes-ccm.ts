@@ -1,10 +1,11 @@
-import { unsafe } from '@noble/ciphers/aes';
-import { concatBytes, getOutput, complexOverlapBytes, clean } from '@noble/ciphers/utils';
+import { ctr, unsafe } from '@noble/ciphers/aes';
+import { concatBytes, clean } from '@noble/ciphers/utils';
 import { CryptoUtils } from './crypto-utils.ts';
 
 const BLOCK_SIZE = 16;
 const TAG_LENGTH = 8;
 const FLAGS_BYTE = 0x19;
+const CTR_FLAGS_Q2 = 0x01;
 
 /**
  * AES-CCM (Counter with CBC-MAC) mode implementation.
@@ -15,13 +16,15 @@ const FLAGS_BYTE = 0x19;
  * - CTR mode for encryption
  */
 export class AESCCM {
+  private encKey: Uint8Array;
   private xk: Uint32Array;
 
   constructor(key: Uint8Array) {
-    if (key.length != 32) {
+    if (key.length != 16 && key.length != 24 && key.length != 32) {
       throw new Error(`AES-CCM: invalid key size, must be 16, 24, or 32 bytes, got ${key.length}`);
     }
 
+    this.encKey = key;
     this.xk = unsafe.expandKeyLE(key);
   }
 
@@ -36,15 +39,21 @@ export class AESCCM {
     this.validateNonce(nonce.length, data.length);
 
     const q = BLOCK_SIZE - 1 - nonce.length;
+    const ctrNonce = new Uint8Array(16);
+    ctrNonce[0] = CTR_FLAGS_Q2;
+    ctrNonce.set(nonce, 1);
 
     // Step 1: Compute the authentication tag using CBC-MAC (over plaintext)
     const mac = this.computeCBCMAC(data, nonce, q);
 
     // Step 2: Encrypt using CTR mode
-    const ciphertext = this.ctrEncrypt(data, nonce, q);
+    const ciphertext = ctr(this.encKey, ctrNonce).encrypt(data);
 
     // Return ciphertext || tag (concat first, then clean sensitive data)
     const result = concatBytes(ciphertext, mac);
+
+    console.log(result);
+
     clean(mac);
     return result;
   }
@@ -65,12 +74,16 @@ export class AESCCM {
     const mac = ciphertext.subarray(ciphertext.length - TAG_LENGTH);
     const ct = ciphertext.subarray(0, ciphertext.length - TAG_LENGTH);
 
+    const ctrNonce = new Uint8Array(16);
+    ctrNonce[0] = CTR_FLAGS_Q2;
+    ctrNonce.set(nonce, 1);
+
     this.validateNonce(nonce.length, ct.length);
 
     const q = BLOCK_SIZE - 1 - nonce.length;
 
     // Step 1: Decrypt using CTR mode (CTR decrypt = CTR encrypt)
-    const plaintext = this.ctrEncrypt(ct, nonce, q);
+    const plaintext = ctr(this.encKey, ctrNonce).decrypt(ct);
 
     // Step 2: Verify the authentication tag using CBC-MAC (over plaintext)
     // In CCM, the MAC is computed over the plaintext, so we must decrypt first
@@ -84,61 +97,6 @@ export class AESCCM {
     clean(computedMac);
 
     return plaintext;
-  }
-
-  /**
-   * Encrypt/decrypt data using CTR mode with CCM counter block format.
-   *
-   * CCM counter blocks: flags_byte || nonce || counter (q bytes, big-endian)
-   * Counter starts at 1 (block 0 is reserved for the first CBC-MAC block).
-   */
-  private ctrEncrypt(data: Uint8Array, nonce: Uint8Array, q: number): Uint8Array {
-    const dst = getOutput(data.length);
-    complexOverlapBytes(data, dst);
-
-    // Build the initial counter block
-    // C_i = flags || nonce || i (big-endian, q bytes)
-    // Encryption starts at i=1 (C_0 is reserved)
-    const counterBlock = new Uint8Array(BLOCK_SIZE);
-    counterBlock[0] = FLAGS_BYTE;
-    counterBlock.set(nonce, 1);
-    // Last q bytes are the counter, set to 1
-    const counterOffset = BLOCK_SIZE - q;
-    counterBlock[counterOffset + q - 1] = 0x01;
-
-    let remaining = data.length;
-    let offset = 0;
-
-    while (remaining > 0) {
-      // Encrypt the counter block to get keystream
-      const keystream = unsafe.encryptBlock(this.xk, counterBlock);
-
-      // XOR keystream with data
-      const chunkSize = Math.min(remaining, BLOCK_SIZE);
-      for (let i = 0; i < chunkSize; i++) {
-        dst[offset + i] = data[offset + i] ^ keystream[i];
-      }
-
-      offset += chunkSize;
-      remaining -= chunkSize;
-
-      // Increment the counter (last q bytes, big-endian)
-      this.incrementCounter(counterBlock, counterOffset, q);
-    }
-
-    return dst;
-  }
-
-  /**
-   * Increment a big-endian counter in a byte array.
-   */
-  private incrementCounter(block: Uint8Array, offset: number, length: number): void {
-    let i = offset + length - 1;
-    while (i >= offset) {
-      block[i] = (block[i] + 1) & 0xff;
-      if (block[i] !== 0) break;
-      i--;
-    }
   }
 
   /**
@@ -156,6 +114,8 @@ export class AESCCM {
     if (data.length > 0) {
       blocks.push(...this.formatData(data));
     }
+
+    console.log(blocks);
 
     // Compute CBC-MAC over all blocks
     let mac = new Uint8Array(BLOCK_SIZE);

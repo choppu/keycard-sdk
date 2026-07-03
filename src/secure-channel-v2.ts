@@ -61,7 +61,7 @@ export class SecureChannelV2 implements SecureChannel {
     }
   }
 
-  async processHandshakeResponse(salt: Uint8Array, clientEphPriv: Uint8Array, cardResponse: Uint8Array) : Promise<void> {
+  processHandshakeResponse(salt: Uint8Array, clientEphPriv: Uint8Array, cardResponse: Uint8Array) : void {
     // Parse card response: card_eph_pub (65B) || sig (DER, variable)
     if (cardResponse.length < PUBKEY_SIZE + 2) {
       throw new APDUException("Invalid handshake response: too short");
@@ -82,7 +82,7 @@ export class SecureChannelV2 implements SecureChannel {
 
     // Verify card's ECDSA signature over transcript
     // transcript = hkdf_salt || client_eph_pub || card_eph_pub
-    await this.verifyCardSignature(salt, this.clientEphPub!, cardEphPub, signature);
+    this.verifyCardSignature(salt, this.clientEphPub!, cardEphPub, signature);
 
     // Initialize nonce counter to zero
     this.nonceCounter = new Uint8Array(CCM_NONCE_SIZE);
@@ -207,25 +207,23 @@ export class SecureChannelV2 implements SecureChannel {
     return false;
   }
 
-  private async verifyCardSignature(salt: Uint8Array, clientPub: Uint8Array, cardPub: Uint8Array, signature: Uint8Array) : Promise<void> {
-    try {
-      let hashBytes = sha256.create();
-      hashBytes.update(PROTOCOL_LABEL);
-      hashBytes.update(salt);
-      hashBytes.update(clientPub);
-      hashBytes.update(cardPub);
+  private verifyCardSignature(salt: Uint8Array, clientPub: Uint8Array, cardPub: Uint8Array, signature: Uint8Array) : void {
+    if (this.cardIdentPub == null) {
+      throw new APDUException("Card identity public key not available");
+    }
 
-      let keyData = hashBytes.digest();
+    let hashBytes = sha256.create();
+    hashBytes.update(PROTOCOL_LABEL);
+    hashBytes.update(salt);
+    hashBytes.update(clientPub);
+    hashBytes.update(cardPub);
 
-      if (this.cardIdentPub == null) {
-        throw new APDUException("Card identity public key not available");
-      }
+    let keyData = hashBytes.digest();
 
-      if (!(await secp.verifyAsync(signature, keyData, cardPub))) {
-        throw new APDUException("Card authentication failed: invalid signature");
-      }
-    } catch (err: any) {
-      throw new Error(err);
+    const compactSig = CryptoUtils.derToCompact(signature);
+
+    if (!secp.verify(compactSig, keyData, this.cardIdentPub, { prehash: false, lowS: false })) {
+      throw new APDUException("Card authentication failed: invalid signature");
     }
   }
 

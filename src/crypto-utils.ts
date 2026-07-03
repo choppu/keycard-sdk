@@ -1,6 +1,9 @@
 import { randomBytes } from '@noble/hashes/utils';
 import { cbc } from '@noble/ciphers/aes.js';
 import * as secp from '@noble/secp256k1';
+import { BERTLV } from './ber-tlv.ts';
+import { Constants } from './constants.ts';
+
 export namespace CryptoUtils {
   export function wordArrayToByteArray(wordArray: any) : Uint8Array {
     let words = wordArray.words;
@@ -94,5 +97,28 @@ export namespace CryptoUtils {
     }
 
     return result === 0;
+  }
+
+  export function derToCompact(derSignature: Uint8Array): Uint8Array {
+    const ber = new BERTLV(derSignature);
+
+    ber.enterConstructed(Constants.TLV_ECDSA_TEMPLATE);
+
+    // Read r and s as raw INTEGER primitives (tag 0x02)
+    const r = stripLeadingZero(ber.readPrimitive(0x02));
+    const s = stripLeadingZero(ber.readPrimitive(0x02));
+
+    const compact = new Uint8Array(64);
+    compact.set(r, 32 - r.length);
+    compact.set(s, 32 + 32 - s.length);
+
+    return compact;
+  }
+
+  function stripLeadingZero(bytes: Uint8Array): Uint8Array {
+    let start = 0;
+
+    while (start < bytes.length - 1 && bytes[start] === 0) start++;
+    return bytes.slice(start);
   }
 }
