@@ -2,7 +2,7 @@ import { ApplicationInfo } from "../application-info.ts";
 
 export type KeycardManagerArgs = {
   skipVerificationUID?: Uint8Array[];
-  cardPublicKeys?: Uint8Array[];
+  caPublicKeys?: Uint8Array[];
   newPin?: string;
   duressPin?: string;
   newPuk?: string;

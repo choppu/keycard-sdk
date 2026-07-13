@@ -1,5 +1,4 @@
 import { CardChannel } from "./card-channel.ts"
-import { SecureChannel } from "./secure-channel.ts"
 import { ApplicationInfo } from "./application-info.ts"
 import { Pairing } from "./pairing.ts"
 import { APDUResponse } from "./apdu-response.ts"
@@ -11,6 +10,8 @@ import { Constants } from "./constants.ts"
 import { pbkdf2 } from "@noble/hashes/pbkdf2"
 import { sha256 } from "@noble/hashes/sha2"
 import { Identifiers } from "./identifiers.ts"
+import { SecureChannelV2 } from "./secure-channel-v2.ts"
+import { SecureChannelV1 } from "./secure-channel-v1.ts"
 
 const INS_INIT = 0xfe;
 const INS_GET_STATUS = 0xf2;
@@ -28,6 +29,9 @@ const INS_SET_PINLESS_PATH = 0xc1;
 const INS_EXPORT_KEY = 0xc2;
 const INS_GET_DATA = 0xca;
 const INS_FACTORY_RESET = 0xfd;
+const INS_EXPORT_LEE = 0xc3;
+const INS_GET_CHALLENGE = 0x84;
+
 
 const CHANGE_PIN_P1_USER_PIN = 0x00;
 const CHANGE_PIN_P1_PUK = 0x01;
@@ -36,11 +40,17 @@ const CHANGE_PIN_P1_PAIRING_SECRET = 0x02;
 const LOAD_KEY_P1_EC = 0x01;
 const LOAD_KEY_P1_EXT_EC = 0x02;
 const LOAD_KEY_P1_SEED = 0x03;
+const LOAD_KEY_P1_LEE = 0x04;
 
 const SIGN_P1_CURRENT_KEY = 0x00;
 const SIGN_P1_DERIVE = 0x01;
 const SIGN_P1_DERIVE_AND_MAKE_CURRENT = 0x02;
 const SIGN_P1_PINLESS = 0x03;
+
+export const SIGN_P2_ECDSA = 0x00;
+export const SIGN_P2_EDDSA_ED25519 = 0x01;
+export const SIGN_P2_BLS12_381 = 0x02;
+export const SIGN_P2_BIP340_SCHNORR = 0x03;
 
 const STORE_DATA_P1_NDEF = 0x01;
 
@@ -55,24 +65,54 @@ const EXPORT_KEY_P2_EXTENDED_PUBLIC = 0x02;
 const FACTORY_RESET_P1_MAGIC = 0xaa;
 const FACTORY_RESET_P2_MAGIC = 0x55;
 
+const DEFAULT_CA_PUBLIC_KEY = new Uint8Array([
+  0x02, 0x9a, 0xb9, 0x9e, 0xe1, 0xe7, 0xa7, 0x1b, 0xdf,
+  0x45, 0xb3, 0xf9, 0xc5, 0x8c, 0x99, 0x86, 0x6f, 0xf1,
+  0x29, 0x4d, 0x2c, 0x1e, 0x30, 0x4e, 0x22, 0x8a, 0x86,
+  0xe1, 0x0c, 0x33, 0x43, 0x50, 0x1c
+]);
+
+const PAIR_P2_ANY = 0x00;
+export const PAIR_P2_EPHEMERAL = 0x01;
+export const PAIR_P2_PERSISTENT = 0x02;
+
 
 export class Commandset {
-  apduChannel: CardChannel;
-  secureChannel: SecureChannel;
-  applicationInfo: ApplicationInfo | null;
+  apduChannel!: CardChannel;
+  secureChannel!: SecureChannelV1 | SecureChannelV2;
+  applicationInfo!: ApplicationInfo | null;
+  caPublicKeys!: Uint8Array[];
+  whitelistedCardPublicKeys!: Uint8Array[];
 
-  constructor(channel: CardChannel) {
-    this.apduChannel = channel;
-    this.secureChannel = new SecureChannel();
-    this.applicationInfo = null;
+  constructor(channel: CardChannel, caPublicKeys?: Uint8Array[], whitelistedCaPubKey?: Uint8Array[]) {
+    const cardPubKey = caPublicKeys ? caPublicKeys: [DEFAULT_CA_PUBLIC_KEY];
+    const wCardPubKeys = whitelistedCaPubKey ? whitelistedCaPubKey : [] as Uint8Array[];
+    this.createSecureChannel(channel, cardPubKey, wCardPubKeys);
   }
 
-  setSecureChannel(secureChannel: SecureChannel) : void {
+  private createSecureChannel(channel: CardChannel, caPublicKeys: Uint8Array[], whitelistedCardPublicKeys: Uint8Array[]) : void {
+    if (caPublicKeys == null) {
+      throw new Error("caPublicKeys must not be null");
+    }
+    if (whitelistedCardPublicKeys == null) {
+      throw new Error("whitelistedCardPublicKeys must not be null");
+    }
+    this.apduChannel = channel;
+    this.caPublicKeys = caPublicKeys;
+    this.whitelistedCardPublicKeys = whitelistedCardPublicKeys;
+    this.secureChannel = new SecureChannelV2(caPublicKeys, whitelistedCardPublicKeys);
+  }
+
+  private isSecureChannelV2(appInfo: ApplicationInfo) : boolean {
+    return appInfo.appVersion >= 0x0400;
+  }
+
+  setSecureChannel(secureChannel: SecureChannelV1 | SecureChannelV2) : void {
     this.secureChannel = secureChannel;
   }
 
-  getPairing() : Pairing {
-    return this.secureChannel.pairing!;
+  getPairing() : Pairing | null {
+    return this.secureChannel.getPairing();
   }
 
   setPairing(pairing: Pairing) : void {
@@ -87,8 +127,13 @@ export class Commandset {
       this.applicationInfo = new ApplicationInfo(resp.data!);
 
       if (this.applicationInfo.hasSecureChannelCapability()) {
-        this.secureChannel.generateSecret(this.applicationInfo.secureChannelPubKey);
-        this.secureChannel.reset();
+        if (this.isSecureChannelV2(this.applicationInfo)) {
+          this.secureChannel =  new SecureChannelV2(this.caPublicKeys, this.whitelistedCardPublicKeys);
+          this.secureChannel.setCardCertificate(this.applicationInfo.certificateData);
+        } else {
+          this.secureChannel = new SecureChannelV1();
+          (this.secureChannel as SecureChannelV1).generateSecret(this.applicationInfo.secureChannelPubKey);
+        }
       }
     }
 
@@ -107,12 +152,14 @@ export class Commandset {
     return pbkdf2(sha256, pairingPassword, salt, { c: iterationCount, dkLen: kSize });
   }
 
-  async autoPair(pairingData: string | Uint8Array) : Promise<void> {
+  async autoPair(pairingData: string | Uint8Array, pairingMode?: number) : Promise<void> {
     if (typeof pairingData === "string") {
       pairingData = this.pairingPasswordToSecret(pairingData);
     }
 
-    return this.secureChannel.autoPair(this.apduChannel, pairingData);
+    let pMode = pairingMode ? pairingMode : PAIR_P2_ANY;
+
+    return this.secureChannel.autoPair(this.apduChannel, pMode, pairingData);
   }
 
   async autoUnpair() : Promise<void> {
@@ -127,8 +174,9 @@ export class Commandset {
     return this.secureChannel.mutuallyAuthenticate(this.apduChannel, data);
   }
 
-  async pair(p1: number, data: Uint8Array) : Promise<APDUResponse> {
-    return this.secureChannel.pair(this.apduChannel, p1, data);
+  async pair(p1: number, data: Uint8Array, p2?: number) : Promise<APDUResponse> {
+    const pairP2 = p2 ? p2 : PAIR_P2_ANY;
+    return this.secureChannel.pair(this.apduChannel, p1, pairP2, data);
   }
 
   async unpair(p1: number) : Promise<APDUResponse> {
@@ -186,6 +234,10 @@ export class Commandset {
     return this.loadKey(seed, LOAD_KEY_P1_SEED);
   }
 
+  async loadLEEKey(seed: Uint8Array) : Promise<APDUResponse> {
+    return this.loadKey(seed, LOAD_KEY_P1_LEE);
+  }
+
   loadBIP32KeyPair(keyPair: BIP32KeyPair, omitPublic = false) {
     let p1;
 
@@ -217,18 +269,18 @@ export class Commandset {
     return this.secureChannel.transmit(this.apduChannel, generateKey);
   }
 
-  async sign(data: Uint8Array, p1 = SIGN_P1_CURRENT_KEY) : Promise<APDUResponse> {
-    let sign = this.secureChannel.protectedCommand(0x80, Constants.INS_SIGN, p1, 0x00, data);
+  async sign(data: Uint8Array, p1 = SIGN_P1_CURRENT_KEY, p2 = SIGN_P2_ECDSA) : Promise<APDUResponse> {
+    let sign = this.secureChannel.protectedCommand(0x80, Constants.INS_SIGN, p1, p2, data);
     return this.secureChannel.transmit(this.apduChannel, sign);
   }
 
-  async signWithPath(hash: Uint8Array, path: string, makeCurrent: boolean) : Promise<APDUResponse> {
+  async signWithPath(hash: Uint8Array, path: string, makeCurrent: boolean, algo = SIGN_P2_ECDSA) : Promise<APDUResponse> {
     let keyPath = new KeyPath(path);
     let pathData = keyPath.data;
     let data = new Uint8Array(hash.byteLength + pathData.byteLength);
     data.set(hash, 0);
     data.set(pathData, hash.length);
-    return this.sign(data, keyPath.source | (makeCurrent ? SIGN_P1_DERIVE_AND_MAKE_CURRENT : SIGN_P1_DERIVE));
+    return this.sign(data, keyPath.source | (makeCurrent ? SIGN_P1_DERIVE_AND_MAKE_CURRENT : SIGN_P1_DERIVE), algo);
   }
 
   async signPinless(hash: Uint8Array) : Promise<APDUResponse> {
@@ -295,6 +347,21 @@ export class Commandset {
     return this.exportKey(EXPORT_KEY_P1_CURRENT, publicOnly, new Uint8Array(0));
   }
 
+  async exportLEEKeyFromKeypath(keyPath: string) : Promise<APDUResponse> {
+    const p = new KeyPath(keyPath);
+    return this.exportLEEKey(p.data, p.source);
+  }
+
+  async exportLEEKey(path: Uint8Array, source: number) : Promise<APDUResponse> {
+    const exportLee = this.secureChannel.protectedCommand(0x80, INS_EXPORT_LEE, source, 0, path);
+    return this.secureChannel.transmit(this.apduChannel, exportLee);
+  }
+
+  async getChallenge(len: number) : Promise<APDUResponse> {
+    const getChallenge = this.secureChannel.protectedCommand(0x80, INS_GET_CHALLENGE, len, 0, new Uint8Array(0));
+    return this.secureChannel.transmit(this.apduChannel, getChallenge);
+  }
+
   async getData(dataType: number) : Promise<APDUResponse> {
     let getData = this.secureChannel.protectedCommand(0x80, INS_GET_DATA, dataType, 0, new Uint8Array(0));
     return this.secureChannel.transmit(this.apduChannel, getData);
@@ -322,18 +389,18 @@ export class Commandset {
     }
   }
 
-  async init(pin: string, puk: string, sharedSecret: string | Uint8Array, altPin?: string, pinRetry?: number, pukRetry?: number) : Promise<APDUResponse> {
+  async init(pin: string, puk: string, sharedSecret?: string | Uint8Array, altPin?: string, pinRetry?: number, pukRetry?: number) : Promise<APDUResponse> {
     let extLen = 0;
     let altPinByteArr: Uint8Array | null = null;
 
-    if (typeof sharedSecret === "string") {
+    if (sharedSecret != undefined && typeof sharedSecret === "string") {
       sharedSecret = this.pairingPasswordToSecret(sharedSecret);
     }
 
     let pinByteArr = CryptoUtils.stringToUint8Array(pin);
     let pukByteArr = CryptoUtils.stringToUint8Array(puk);
 
-    let baseLen = pinByteArr.byteLength + pukByteArr.byteLength + sharedSecret.byteLength;
+    let baseLen = pinByteArr.byteLength + pukByteArr.byteLength + (sharedSecret != undefined ? sharedSecret.byteLength : 0);
 
     if(altPin) {
       altPinByteArr = CryptoUtils.stringToUint8Array(altPin);
@@ -346,8 +413,11 @@ export class Commandset {
 
     initData.set(pinByteArr, 0);
     initData.set(pukByteArr, pinByteArr.byteLength);
-    initData.set(sharedSecret, pinByteArr.byteLength + pukByteArr.byteLength);
-    
+
+    if(sharedSecret) {
+      initData.set(sharedSecret, pinByteArr.byteLength + pukByteArr.byteLength);
+    }
+
     if(extLen > 0) {
       initData[baseLen] = pinRetry ? pinRetry : 3;
       initData[baseLen + 1] = pukRetry ? pukRetry : 5;
@@ -357,12 +427,19 @@ export class Commandset {
       initData.set(altPinByteArr, baseLen + 2);
     }
 
-    let init = new APDUCommand(0x80, INS_INIT, 0, 0, this.secureChannel.oneShotEncrypt(initData));
-    return this.apduChannel.send(init);
+    if (this.secureChannel instanceof SecureChannelV2) {
+      this.secureChannel.autoOpenSecureChannel(this.apduChannel);
+      const initCmd = this.secureChannel.protectedCommand(0x80, INS_INIT, 0, 0, initData);
+      return this.secureChannel.transmit(this.apduChannel, initCmd);
+    } else {
+      // V1: use one-shot encryption with the static shared secret
+      const init = new APDUCommand(0x80, INS_INIT, 0, 0, this.secureChannel.oneShotEncrypt(initData));
+      return this.apduChannel.send(init);
+    }
   }
 
   async factoryReset(): Promise<APDUResponse> {
     let factoryReset = new APDUCommand(0x80, INS_FACTORY_RESET, FACTORY_RESET_P1_MAGIC, FACTORY_RESET_P2_MAGIC, new Uint8Array(0));
     return this.apduChannel.send(factoryReset);
-  }  
+  }
 }

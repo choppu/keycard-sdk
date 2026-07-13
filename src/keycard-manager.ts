@@ -13,12 +13,15 @@ import { Constants } from './constants.ts';
 import { BIP32KeyPair } from './bip32key.ts';
 import { Mnemonic } from './mnemonic.ts';
 import KeycardEventEmitter from './keycard-event-emitter.ts';
+import { WhitelistedPubKeysStorage } from './whitelisted-cards-storage.ts';
 
 export const PAIRED = 0;
+export const SECURE_CHANNEL_OPENED = 0;
 export const LOADED = 1;
 
 export const CardInitializeError = 0xca17;
 export const CardPairingError = 0xca61;
+export const CardSecureChannelError = 0xca53;
 export const CardLoadKeyError = 0xca13;
 export const CardAuthenticationError = 0xcaa4;
 export const CardPinVerificationError = 0xca91;
@@ -46,11 +49,16 @@ export class KManagerError extends Error {
 
 export class KeycardManager  {
   pairingStorage: PairingStorage;
+  whitelistedPKStorage: WhitelistedPubKeysStorage | undefined;
   emitter: KeycardEventEmitter;
 
-  constructor(storage: PairingStorage) {
+  constructor(pairingStorage: PairingStorage, whitelistedPKStorage?: WhitelistedPubKeysStorage) {
     this.emitter = new KeycardEventEmitter();
-    this.pairingStorage = storage;
+    this.pairingStorage = pairingStorage;
+
+    if(whitelistedPKStorage) {
+      this.whitelistedPKStorage = whitelistedPKStorage;
+    }
   }
 
   private generatePIN(): string {
@@ -63,8 +71,8 @@ export class KeycardManager  {
     return (parseInt(hexStr, 16)).toString().substring(0, 12);
   }
 
-  private async verifyAuthenticity(cmdSet: Commandset, instanceUID: Uint8Array, skipVerificationUID: Uint8Array[], cardPubKeys: Uint8Array[]): Promise<boolean> {
-    if (cardPubKeys.length == 0 && skipVerificationUID.map(uid => uid == instanceUID)) {
+  private async verifyAuthenticity(cmdSet: Commandset, instanceUID: Uint8Array, skipVerificationUID: Uint8Array[], caPublicKeys: Uint8Array[]): Promise<boolean> {
+    if (caPublicKeys.length == 0 && skipVerificationUID.map(uid => uid == instanceUID)) {
       return true;
     }
 
@@ -77,9 +85,9 @@ export class KeycardManager  {
         return false;
       }
 
-      if (cardPubKeys) {
-        for (let i = 0; i < cardPubKeys.length; i++) {
-          if (CryptoUtils.Uint8ArrayEqual(cardPubKeys[i], cardPubKey)) {
+      if (caPublicKeys) {
+        for (let i = 0; i < caPublicKeys.length; i++) {
+          if (CryptoUtils.Uint8ArrayEqual(caPublicKeys[i], cardPubKey)) {
             return true;
           }
         }
@@ -100,9 +108,9 @@ export class KeycardManager  {
   private async tryAutoPair(pairingPassword: string | Uint8Array, cmdSet: Commandset, pairingStorage: PairingStorage, uid: Uint8Array): Promise<{ paired: boolean, pairing: string | null }> {
     try {
       await cmdSet.autoPair(pairingPassword);
-      let pairing = cmdSet.getPairing().toBase64();
+      let pairing = cmdSet.getPairing()!.toBase64();
 
-      if (cmdSet.getPairing().pairingIndex != 0xFF) {
+      if (cmdSet.getPairing()!.pairingIndex != 0xFF) {
         await pairingStorage.putPairing(uid, pairing);
       }
 
@@ -124,8 +132,10 @@ export class KeycardManager  {
 
     let sessionPairingPassword: string | Uint8Array = defaultPairingPassword;
 
+    const whitelistedPubKeys = this.whitelistedPKStorage ? (await this.whitelistedPKStorage?.getWhitelistedPubKeys()) : undefined;
+
     try {
-      let cmdSet = new Commandset(channel);
+      let cmdSet = new Commandset(channel, args.caPublicKeys, whitelistedPubKeys);
       let applicationInfo = new ApplicationInfo((await cmdSet.select()).checkOK().data);
       let respData: KeycardManagerResponseData = {} as KeycardManagerResponseData;
 
@@ -157,80 +167,94 @@ export class KeycardManager  {
         }
       }
 
-      paired = await this.pairingStorage.getPairing(applicationInfo.instanceUID) != null;
-      respData.paired = paired;
+      if (applicationInfo.appVersion < 0x0400) {
+        paired = await this.pairingStorage.getPairing(applicationInfo.instanceUID) != null;
+        respData.paired = paired;
 
-      if (!paired) {
-        if (!args.skipVerificationUID || !args.cardPublicKeys) {
-          respData.type = CardAuthenticationError;
-          respData.message = "Error: Card authentication failed. skipVerificationUID and/or cardPublicKeys are missing.";
-          return { status: 'error', data: respData };
+        if (!paired) {
+          if (!args.skipVerificationUID || !args.caPublicKeys) {
+            respData.type = CardAuthenticationError;
+            respData.message = "Error: Card authentication failed. skipVerificationUID and/or cardPublicKeys are missing.";
+            return { status: 'error', data: respData };
+          }
+
+          cardAuthentic = await this.verifyAuthenticity(cmdSet, applicationInfo.instanceUID, args.skipVerificationUID!, args.caPublicKeys!);
+          respData.cardAuthentic = cardAuthentic;
+
+          if (!cardAuthentic) {
+            throw new KManagerError('Card is not authentic.', CardAuthenticationError, respData);
+          }
+
+          this.emitter.emit("card-authentic", respData);
+
+          try {
+            sessionPairingPassword = args.pairingPassword ? args.pairingPassword : sessionPairingPassword;
+            let r = await this.tryAutoPair(sessionPairingPassword, cmdSet, this.pairingStorage, applicationInfo.instanceUID)
+
+            paired = r.paired;
+            respData.paired = paired;
+
+            if (r.pairing) {
+              pairing = r.pairing;
+            }
+            this.emitter.emit("card-paired", respData);
+          } catch (err: any) {
+            throw new KManagerError(`Card pairing error. ${err}`, CardPairingError, respData);
+          }
         }
-
-        cardAuthentic = await this.verifyAuthenticity(cmdSet, applicationInfo.instanceUID, args.skipVerificationUID!, args.cardPublicKeys!);
-        respData.cardAuthentic = cardAuthentic;
-
-        if (!cardAuthentic) {
-          throw new KManagerError('Card is not authentic.', CardAuthenticationError, respData);
-        }
-
-        this.emitter.emit("card-authentic", respData);
 
         try {
-          sessionPairingPassword = args.pairingPassword ? args.pairingPassword : sessionPairingPassword;
-          let r = await this.tryAutoPair(sessionPairingPassword, cmdSet, this.pairingStorage, applicationInfo.instanceUID)
+          let storedPairing = await this.pairingStorage.getPairing(applicationInfo.instanceUID);
 
-          paired = r.paired;
-          respData.paired = paired;
-
-          if (r.pairing) {
-            pairing = r.pairing;
+          if (storedPairing) {
+            pairing = await this.pairingStorage.getPairing(applicationInfo.instanceUID) as string;
           }
-          this.emitter.emit("card-paired", respData);
+
+          cmdSet.setPairing(Pairing.fromString(pairing!));
+          (await cmdSet.autoOpenSecureChannel());
+          this.emitter.emit("secure-channel-opened", respData);
         } catch (err: any) {
-          throw new KManagerError(`Card pairing error. ${err}`, CardPairingError, respData);
-        }
-      }
-
-      try {
-        let storedPairing = await this.pairingStorage.getPairing(applicationInfo.instanceUID);
-
-        if (storedPairing) {
-          pairing = await this.pairingStorage.getPairing(applicationInfo.instanceUID) as string;
-        }
-
-        cmdSet.setPairing(Pairing.fromString(pairing!));
-        (await cmdSet.autoOpenSecureChannel());
-        this.emitter.emit("secure-channel-opened", respData);
-      } catch (err: any) {
-        if(!(err instanceof CardIOError)) {
-          await this.pairingStorage.deletePairing(applicationInfo.instanceUID);
-        }
-
-        if (!args.skipVerificationUID || !args.cardPublicKeys) {
-          respData.type = CardAuthenticationError;
-          respData.message = "Error opening secure channel. Card authentication failed. skipVerificationUID and/or cardPublicKeys are missing.";
-          return { status: 'error', data: respData };
-        }
-
-        cardAuthentic = await this.verifyAuthenticity(cmdSet, applicationInfo.instanceUID, args.skipVerificationUID!, args.cardPublicKeys!);
-
-        if (cardAuthentic) {
-          let r = await this.tryAutoPair(sessionPairingPassword, cmdSet, this.pairingStorage, applicationInfo.instanceUID);
-          paired = r.paired;
-
-          if (r.pairing) {
-            pairing = r.pairing;
+          if (!(err instanceof CardIOError)) {
+            await this.pairingStorage.deletePairing(applicationInfo.instanceUID);
           }
 
-          if (paired) {
-            cmdSet.setPairing(Pairing.fromString(pairing!));
-            (await cmdSet.autoOpenSecureChannel());
+          if (!args.skipVerificationUID || !args.caPublicKeys) {
+            respData.type = CardAuthenticationError;
+            respData.message = "Error opening secure channel. Card authentication failed. skipVerificationUID and/or cardPublicKeys are missing.";
+            return { status: 'error', data: respData };
+          }
+
+          cardAuthentic = await this.verifyAuthenticity(cmdSet, applicationInfo.instanceUID, args.skipVerificationUID!, args.caPublicKeys!);
+
+          if (cardAuthentic) {
+            let r = await this.tryAutoPair(sessionPairingPassword, cmdSet, this.pairingStorage, applicationInfo.instanceUID);
+            paired = r.paired;
+
+            if (r.pairing) {
+              pairing = r.pairing;
+            }
+
+            if (paired) {
+              cmdSet.setPairing(Pairing.fromString(pairing!));
+              (await cmdSet.autoOpenSecureChannel());
+            } else {
+              throw new KManagerError(`Error opening secure channel. ${err}`, CardPairingError, respData);
+            }
           } else {
             throw new KManagerError(`Error opening secure channel. ${err}`, CardPairingError, respData);
           }
-        } else {
-          throw new KManagerError(`Error opening secure channel. ${err}`, CardPairingError, respData);
+        }
+      } else {
+        try {
+          await cmdSet.autoOpenSecureChannel();
+
+          if(this.whitelistedPKStorage) {
+            const cert = Certificate.fromTLV(applicationInfo.certificateData);
+            this.whitelistedPKStorage.addPubKeyToWhitelisted(cert.identPub);
+          }
+
+        } catch(err: any) {
+          throw new KManagerError(`Error opening secure channel. ${err}`, CardSecureChannelError, respData);
         }
       }
 
@@ -259,7 +283,7 @@ export class KeycardManager  {
         throw new KManagerError(`Error verifying PIN. ${err}`, CardPinVerificationError, respData);
       }
 
-      if (state == PAIRED) {
+      if (state == PAIRED || SECURE_CHANNEL_OPENED) {
         try {
           respData.cbFuncResponse = await cbFunc(cmdSet);
           this.emitter.emit("cmd-executed", respData);

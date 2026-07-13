@@ -1,6 +1,8 @@
 import { Constants } from "./constants.ts"
 
 const TLV_BOOL = 0x01;
+const END_OF_TLV = 0xffffffff;
+
 
 export class BERTLV {
   buffer: Uint8Array;
@@ -74,5 +76,15 @@ export class BERTLV {
 
   peekUnread() : Uint8Array {
     return this.buffer.subarray(this.position);
+  }
+
+  nextTagIs(expectedTag: number) : boolean {
+    const nextTag = this.readTag();
+    
+    if (nextTag != END_OF_TLV) {
+      this.unreadLastTag();
+    }
+
+    return nextTag == expectedTag;
   }
 }

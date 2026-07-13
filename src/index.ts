@@ -23,6 +23,7 @@ import { KeycardManager } from "./keycard-manager.ts"
 import KeycardEventEmitter from "./keycard-event-emitter.ts"
 import type { Callback, Subscription } from "./types/keycard-event-emitter-types.ts"
 import type { ParsedTLV } from "./types/bip32.ts"
+import type { WhitelistedPubKeysStorage } from "./whitelisted-cards-storage.ts"
 
 export let Keycard = {
   Commandset: Commandset,
@@ -49,5 +50,5 @@ export let Keycard = {
   KeycardEventEmitter: KeycardEventEmitter
 }
 
-export { RecoverableSignatureTypes, PairingStorage, Callback, Subscription, ParsedTLV };
+export { RecoverableSignatureTypes, PairingStorage, Callback, Subscription, ParsedTLV, WhitelistedPubKeysStorage };
 export default Keycard;

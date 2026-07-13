@@ -1,6 +1,9 @@
 import { randomBytes } from '@noble/hashes/utils';
 import { cbc } from '@noble/ciphers/aes.js';
 import * as secp from '@noble/secp256k1';
+import { BERTLV } from './ber-tlv.ts';
+import { Constants } from './constants.ts';
+
 export namespace CryptoUtils {
   export function wordArrayToByteArray(wordArray: any) : Uint8Array {
     let words = wordArray.words;
@@ -82,4 +85,68 @@ export namespace CryptoUtils {
     let dataToEncrypt = noPadding ? data : addIso97971Padding(data);
     return cbc(key, iv, {disablePadding: true}).encrypt(dataToEncrypt);
   }
+
+  export function constantTimeCompare(a: Uint8Array, b: Uint8Array): boolean {
+    if (a.length !== b.length) {
+      return false;
+    }
+
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+      result |= a[i] ^ b[i];
+    }
+
+    return result === 0;
+  }
+
+  export function derToCompact(derSignature: Uint8Array): Uint8Array {
+    const ber = new BERTLV(derSignature);
+
+    ber.enterConstructed(Constants.TLV_ECDSA_TEMPLATE);
+
+    // Read r and s as raw INTEGER primitives (tag 0x02)
+    const r = stripLeadingZero(ber.readPrimitive(0x02));
+    const s = stripLeadingZero(ber.readPrimitive(0x02));
+
+    const compact = new Uint8Array(64);
+    compact.set(r, 32 - r.length);
+    compact.set(s, 32 + 32 - s.length);
+
+    return compact;
+  }
+
+  export function verifySchnorrSignature(message: Uint8Array, data: Uint8Array) : Promise<boolean> {
+    const keyData = extractPublicKeyFromSignature(data);
+    const signature = extractSignature(data);
+    return secp.schnorr.verifyAsync(signature.subarray(2), message, keyData.subarray(1, 33));
+  }
+
+  export function extractPublicKeyFromSignature(signatureData: Uint8Array) : Uint8Array {
+    if(signatureData[0] != Constants.TLV_SIGNATURE_TEMPLATE) {
+      throw new Error("Invalid TLV signature template");
+    }
+
+    if(signatureData[1] != 0x81) {
+      throw new Error("Invalid length");
+    }
+
+    if(signatureData[3] != Constants.TLV_PUB_KEY) {
+      throw new Error("Invalid public key");
+    }
+
+    return signatureData.subarray(5, 5 + signatureData[4])
+  }
+
+  export function extractSignature(sig: Uint8Array) : Uint8Array {
+    const off = sig[4] + 5;
+    return sig.subarray(off, off + sig[off + 1] + 2);
+  }
+
+  function stripLeadingZero(bytes: Uint8Array): Uint8Array {
+    let start = 0;
+
+    while (start < bytes.length - 1 && bytes[start] === 0) start++;
+    return bytes.slice(start);
+  }
+ 
 }
