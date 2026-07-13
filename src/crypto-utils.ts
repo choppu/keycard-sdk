@@ -115,10 +115,38 @@ export namespace CryptoUtils {
     return compact;
   }
 
+  export function verifySchnorrSignature(message: Uint8Array, data: Uint8Array) : Promise<boolean> {
+    const keyData = extractPublicKeyFromSignature(data);
+    const signature = extractSignature(data);
+    return secp.schnorr.verifyAsync(signature.subarray(2), message, keyData.subarray(1, 33));
+  }
+
+  export function extractPublicKeyFromSignature(signatureData: Uint8Array) : Uint8Array {
+    if(signatureData[0] != Constants.TLV_SIGNATURE_TEMPLATE) {
+      throw new Error("Invalid TLV signature template");
+    }
+
+    if(signatureData[1] != 0x81) {
+      throw new Error("Invalid length");
+    }
+
+    if(signatureData[3] != Constants.TLV_PUB_KEY) {
+      throw new Error("Invalid public key");
+    }
+
+    return signatureData.subarray(5, 5 + signatureData[4])
+  }
+
+  export function extractSignature(sig: Uint8Array) : Uint8Array {
+    const off = sig[4] + 5;
+    return sig.subarray(off, off + sig[off + 1] + 2);
+  }
+
   function stripLeadingZero(bytes: Uint8Array): Uint8Array {
     let start = 0;
 
     while (start < bytes.length - 1 && bytes[start] === 0) start++;
     return bytes.slice(start);
   }
+ 
 }

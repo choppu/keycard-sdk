@@ -3,6 +3,8 @@ import { Keycard } from "../dist/index.js"
 import type { RecoverableSignatureProps } from "../dist/types/recoverable-signature-types.js";
 import pcsclite from "@nonth/pcsclite";
 import process from "process";
+import { SIGN_P2_BIP340_SCHNORR } from "../dist/commandset.js";
+import { CryptoUtils } from "../dist/crypto-utils.js";
 
 const pcsc = pcsclite();
 
@@ -102,7 +104,7 @@ function createChannel(): any {
               console.log("Binary seed: " + hx(mnemonic.toBinarySeed()));
 
               console.log("Verify PIN");
-              (await cmdSet.verifyPIN("123456")).checkAuthOK();
+              (await cmdSet.verifyPIN("000000")).checkAuthOK();
 
               if (!status.hasMasterKey) {
                 (await cmdSet.loadBIP32KeyPair(mnemonic.toBIP32KeyPair())).checkOK();
@@ -122,6 +124,13 @@ function createChannel(): any {
               console.log("Rec address: " + hx(signature.getEthereumAddress()));
               console.log("R: " + hx(signature.r!));
               console.log("S: " + hx(signature.s!));
+
+              const schnorrSignature = (await cmdSet.signWithPath(hash, "m/44'/60'/0'/0/1", false, SIGN_P2_BIP340_SCHNORR)).checkOK().data;
+              const isValidSig = await CryptoUtils.verifySchnorrSignature(hash, schnorrSignature);
+
+              console.log("Compressed public key - " + hx(CryptoUtils.compressPublicKey(CryptoUtils.extractPublicKeyFromSignature(schnorrSignature))));
+              console.log("Signature - " + hx(CryptoUtils.extractSignature(schnorrSignature)));
+              console.log(`Is valid schnorr signature - ${isValidSig}`);
 
               if(cmdSet.applicationInfo.appVersion < 0x0400) {
                 console.log("Unpair");
