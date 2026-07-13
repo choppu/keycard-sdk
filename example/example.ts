@@ -125,12 +125,14 @@ function createChannel(): any {
               console.log("R: " + hx(signature.r!));
               console.log("S: " + hx(signature.s!));
 
-              const schnorrSignature = (await cmdSet.signWithPath(hash, "m/44'/60'/0'/0/1", false, SIGN_P2_BIP340_SCHNORR)).checkOK().data;
-              const isValidSig = await CryptoUtils.verifySchnorrSignature(hash, schnorrSignature);
+              if (cmdSet.applicationInfo.appVersion > 0x0400) {
+                const schnorrSignature = (await cmdSet.signWithPath(hash, "m/44'/60'/0'/0/1", false, SIGN_P2_BIP340_SCHNORR)).checkOK().data;
+                const isValidSig = await CryptoUtils.verifySchnorrSignature(hash, schnorrSignature);
 
-              console.log("Compressed public key - " + hx(CryptoUtils.compressPublicKey(CryptoUtils.extractPublicKeyFromSignature(schnorrSignature))));
-              console.log("Signature - " + hx(CryptoUtils.extractSignature(schnorrSignature)));
-              console.log(`Is valid schnorr signature - ${isValidSig}`);
+                console.log("Compressed public key - " + hx(CryptoUtils.compressPublicKey(CryptoUtils.extractPublicKeyFromSignature(schnorrSignature))));
+                console.log("Signature - " + hx(CryptoUtils.extractSignature(schnorrSignature)));
+                console.log(`Is valid schnorr signature - ${isValidSig}`);
+              }
 
               if(cmdSet.applicationInfo.appVersion < 0x0400) {
                 console.log("Unpair");
