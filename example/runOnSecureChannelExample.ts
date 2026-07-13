@@ -66,7 +66,7 @@ function createChannel(): any {
               response = await keycardManager.runOnSecureChannel(
                 channel,
                 PAIRED,
-                { newPin: '123456', skipVerificationUID: [], caPublicKeys: [authCert, devCAKey] },
+                { newPin: '000000', skipVerificationUID: [], caPublicKeys: [authCert, devCAKey] },
                 async (cmdSet: Commandset) => (await cmdSet.generateMnemonic(Constants.GENERATE_MNEMONIC_12_WORDS)).checkOK().data              );
 
               if (response.status == 'error') {
@@ -83,7 +83,7 @@ function createChannel(): any {
               response = await keycardManager.runOnSecureChannel(
                 channel,
                 PAIRED,
-                { pin: '123456', skipVerificationUID: [], caPublicKeys: [authCert] },
+                { pin: '000000', skipVerificationUID: [], caPublicKeys: [authCert] },
                 async (cmdSet: Commandset) => {
                   if(cmdSet.applicationInfo!.appVersion < 0x0400) {
                     await cmdSet.autoUnpair();
@@ -97,7 +97,7 @@ function createChannel(): any {
               response = await keycardManager.runOnSecureChannel(
                 channel,
                 PAIRED,
-                { pin: '123456', skipVerificationUID: [cardInfo.instanceUID], caPublicKeys: [authCert] },
+                { pin: '000000', skipVerificationUID: [cardInfo.instanceUID], caPublicKeys: [authCert] },
                 async (cmdSet: Commandset) => {
                   const resp = (await cmdSet.loadBIP32KeyPair(mn.toBIP32KeyPair())).checkOK();
 
@@ -117,7 +117,7 @@ function createChannel(): any {
               response = await keycardManager.runOnSecureChannel(
                 channel,
                 LOADED,
-                { pin: '123456', pairingPassword: 'KeycardDefaultPairing', skipVerificationUID: [cardInfo.instanceUID], caPublicKeys: [authCert] },
+                { pin: '000000', pairingPassword: 'KeycardDefaultPairing', skipVerificationUID: [cardInfo.instanceUID], caPublicKeys: [authCert] },
                 async (cmdSet: Commandset) => {
                   let resp = (await cmdSet.signWithPath(transactionData, "m", false)).checkOK();
                   if(cmdSet.applicationInfo!.appVersion < 0x0400) {
