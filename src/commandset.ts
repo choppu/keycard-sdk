@@ -31,6 +31,7 @@ const INS_GET_DATA = 0xca;
 const INS_FACTORY_RESET = 0xfd;
 const INS_EXPORT_LEE = 0xc3;
 const INS_GET_CHALLENGE = 0x84;
+const INS_EXPORT_BIP85 = 0xc4;
 
 
 const CHANGE_PIN_P1_USER_PIN = 0x00;
@@ -441,5 +442,11 @@ export class Commandset {
   async factoryReset(): Promise<APDUResponse> {
     let factoryReset = new APDUCommand(0x80, INS_FACTORY_RESET, FACTORY_RESET_P1_MAGIC, FACTORY_RESET_P2_MAGIC, new Uint8Array(0));
     return this.apduChannel.send(factoryReset);
+  }
+
+  async exportBIP85(keyPath: string, len: number): Promise<APDUResponse>  {
+    const path = new KeyPath(keyPath);
+    const exportBIP85 = this.secureChannel.protectedCommand(0x80, INS_EXPORT_BIP85, len, 0, path.data);
+    return this.secureChannel.transmit(this.apduChannel, exportBIP85);
   }
 }
