@@ -429,7 +429,7 @@ export class Commandset {
     }
 
     if (this.secureChannel instanceof SecureChannelV2) {
-      this.secureChannel.autoOpenSecureChannel(this.apduChannel);
+      await this.secureChannel.autoOpenSecureChannel(this.apduChannel);
       const initCmd = this.secureChannel.protectedCommand(0x80, INS_INIT, 0, 0, initData);
       return this.secureChannel.transmit(this.apduChannel, initCmd);
     } else {
