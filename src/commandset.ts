@@ -454,6 +454,11 @@ export class Commandset {
     let extLen = 0;
     let altPinByteArr: Uint8Array | null = null;
 
+    // V2 has no pairing: INIT takes no shared secret
+    if (this.secureChannel instanceof SecureChannelV2) {
+      sharedSecret = undefined;
+    }
+
     if (sharedSecret != undefined && typeof sharedSecret === "string") {
       sharedSecret = (this.secureChannel instanceof SecureChannelV2) ? undefined : this.pairingPasswordToSecret(sharedSecret);
     }
