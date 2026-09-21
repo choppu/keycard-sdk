@@ -1,6 +1,4 @@
-import { Buffer } from "buffer";
-import type { PairingStorage } from "../dist/pairing-storage.js";
-import { WhitelistedPubKeysStorage } from "../dist/whitelisted-cards-storage.js";
+import type { WhitelistedPubKeysStorage } from "../dist/whitelisted-cards-storage.js";
 import { CryptoUtils } from "../dist/crypto-utils.js";
 
 export class TestWhitelistedPubKeysStorage implements WhitelistedPubKeysStorage {

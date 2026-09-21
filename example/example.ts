@@ -16,6 +16,10 @@ const caPubKey = new Uint8Array([
   0x43
 ]);
 
+const peerPub = new Uint8Array(Buffer.from("0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8", "hex"));
+const eip1581Path = new Keycard.KeyPath("m/43'/60'/1581'/0/0");
+const nip44Path = new Keycard.KeyPath("m/44'/1237'/0'/0/0");
+
 function hx(arr: Uint8Array): string {
   return Buffer.from(arr).toString('hex');
 }
@@ -48,7 +52,8 @@ function createChannel(): any {
               (await cmdSet.select()).checkOK();
 
               if (cmdSet.applicationInfo.initializedCard == false) {
-                (await cmdSet.init("123456", "123456123456", "KeycardDefaultPairing")).checkOK();
+                let pairingPass = (cmdSet.applicationInfo.appVersion < 0x0400) ? undefined : "KeycardDefaultPairing";
+                (await cmdSet.init("123456", "123456123456", pairingPass)).checkOK();
                 (await cmdSet.select()).checkOK();
               }
 
@@ -115,6 +120,22 @@ function createChannel(): any {
               console.log("Derived key 1: " + hx(extendedKey.deriveChild(1).publicKey!));
               console.log("Derived key 2: " + hx(extendedKey.deriveChild(2).publicKey!));
 
+              const ecdhEip1581PathData = new Uint8Array(65 + eip1581Path.data.length);
+              ecdhEip1581PathData.set(peerPub, 0);
+              ecdhEip1581PathData.set(eip1581Path.data, 65);
+
+              const ecdhEip1581PatResp = (await cmdSet.ecdh(ecdhEip1581PathData)).checkOK();
+              console.log("ECDH with eip1581Path shared x: " + hx(ecdhEip1581PatResp.data));
+
+              const ecdhNip44PathhData = new Uint8Array(65 + nip44Path.data.length);
+              ecdhNip44PathhData.set(peerPub, 0);
+              ecdhNip44PathhData.set(nip44Path.data, 65);
+
+              const ecdhNip44PathResp = (await cmdSet.ecdh(ecdhNip44PathhData)).checkOK();
+              console.log("ECDH with nip44Path shared x: " + hx(ecdhNip44PathResp.data));
+
+              const ndef = await cmdSet.getNDEF();
+              console.log("NDEF: " + hx(ndef));
 
               let hash = Keycard.CryptoUtils.stringToUint8Array("thiscouldbeahashintheorysoitisok");
               let signature = new Keycard.RecoverableSignature({ hash: hash, tlvData: (await cmdSet.signWithPath(hash, "m/44'/60'/0'/0/1", false)).checkOK().data } as RecoverableSignatureProps);
