@@ -36,7 +36,7 @@ export class PCSCCardChannel implements CardChannel {
 
   sendDataAsync(channel: CardReader, protocol: number, cmd: Buffer) : Promise<Buffer> {
     return new Promise(function(resolve,reject) {
-      channel.transmit(cmd, 255, protocol, function(error: Error | null, response: Buffer) {
+      channel.transmit(cmd, 258, protocol, function(error: Error | null, response: Buffer) {
         if (error) {
           reject(error);
         } else {

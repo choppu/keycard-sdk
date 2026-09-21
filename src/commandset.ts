@@ -12,6 +12,7 @@ import { sha256 } from "@noble/hashes/sha2"
 import { Identifiers } from "./identifiers.ts"
 import { SecureChannelV2 } from "./secure-channel-v2.ts"
 import { SecureChannelV1 } from "./secure-channel-v1.ts"
+import { APDUException } from "./apdu-exception.ts"
 
 const INS_INIT = 0xfe;
 const INS_GET_STATUS = 0xf2;
@@ -32,7 +33,9 @@ const INS_FACTORY_RESET = 0xfd;
 const INS_EXPORT_LEE = 0xc3;
 const INS_GET_CHALLENGE = 0x84;
 const INS_EXPORT_BIP85 = 0xc4;
+const INS_ECDH = 0xc5;
 
+const ECDH_P2_RAW_SECRET = 0x00;
 
 const CHANGE_PIN_P1_USER_PIN = 0x00;
 const CHANGE_PIN_P1_PUK = 0x01;
@@ -275,12 +278,28 @@ export class Commandset {
     return this.secureChannel.transmit(this.apduChannel, sign);
   }
 
-  async signWithPath(hash: Uint8Array, path: string, makeCurrent: boolean, algo = SIGN_P2_ECDSA) : Promise<APDUResponse> {
+  async signWithPath(hash: Uint8Array, path: string, makeCurrent: boolean, algo = SIGN_P2_ECDSA, tweak?: Uint8Array) : Promise<APDUResponse> {
     let keyPath = new KeyPath(path);
     let pathData = keyPath.data;
-    let data = new Uint8Array(hash.byteLength + pathData.byteLength);
-    data.set(hash, 0);
-    data.set(pathData, hash.length);
+    let dataLength = (algo == SIGN_P2_BIP340_SCHNORR) ? hash.byteLength + pathData.byteLength + 32 : hash.byteLength + pathData.byteLength;
+    let data = new Uint8Array(dataLength);
+
+    if (algo == SIGN_P2_BIP340_SCHNORR) {
+      // Schnorr expects: hash (32) + tweak (32) + path. An absent tweak is treated as all-zero.
+      let effectiveTweak =  (tweak == undefined) ? new Uint8Array(32) : tweak;
+
+      if (effectiveTweak.length != 32) {
+        throw new Error("Schnorr tweak must be exactly 32 bytes");
+      }
+
+      data.set(hash, 0);
+      data.set(effectiveTweak, hash.length)
+      data.set(pathData, hash.length + 32);
+    } else {
+      data.set(hash, 0);
+      data.set(pathData, hash.length);
+    }
+
     return this.sign(data, keyPath.source | (makeCurrent ? SIGN_P1_DERIVE_AND_MAKE_CURRENT : SIGN_P1_DERIVE), algo);
   }
 
@@ -358,19 +377,60 @@ export class Commandset {
     return this.secureChannel.transmit(this.apduChannel, exportLee);
   }
 
+  async ecdh(data: Uint8Array, p1 = SIGN_P1_DERIVE, p2 = ECDH_P2_RAW_SECRET) : Promise<APDUResponse>  {
+    const ecdh = this.secureChannel.protectedCommand(0x80, INS_ECDH, p1, p2, data);
+    return this.secureChannel.transmit(this.apduChannel, ecdh);
+  }
+
   async getChallenge(len: number) : Promise<APDUResponse> {
     const getChallenge = this.secureChannel.protectedCommand(0x80, INS_GET_CHALLENGE, len, 0, new Uint8Array(0));
     return this.secureChannel.transmit(this.apduChannel, getChallenge);
   }
 
-  async getData(dataType: number) : Promise<APDUResponse> {
-    let getData = this.secureChannel.protectedCommand(0x80, INS_GET_DATA, dataType, 0, new Uint8Array(0));
+  async getData(dataType: number, offset = 0) : Promise<APDUResponse> {
+    if ((offset % 4) != 0) {
+      throw new Error("Offset must be a multiple of 4");
+    }
+
+    let getData = this.secureChannel.protectedCommand(0x80, INS_GET_DATA, dataType, (offset / 4), new Uint8Array(0));
     return this.secureChannel.transmit(this.apduChannel, getData);
   }
 
   async storeData(data: Uint8Array, dataType: number) : Promise<APDUResponse> {
     let storeData = this.secureChannel.protectedCommand(0x80, Constants.INS_STORE_DATA, dataType, 0, data);
     return this.secureChannel.transmit(this.apduChannel, storeData);
+  }
+
+  async getNDEF(): Promise<Uint8Array> {
+    let ndef: Uint8Array | null = null;
+    let off = 0;
+
+    while (ndef === null || off < ndef.length) {
+      const resp = await this.getData(STORE_DATA_P1_NDEF, off);
+
+      if (resp.sw != Constants.SW_OK) {
+        throw new APDUException("GET DATA failed", resp.sw);
+      }
+
+      const chunk = resp.data;
+
+      if (ndef === null) { // first chunk: carries the length header
+        if (chunk.length < 2) {
+          throw new APDUException("NDEF response too short");
+        }
+
+        ndef = new Uint8Array(((chunk[0] << 8) | chunk[1]) + 2);
+
+        if (ndef.length === chunk.length) {
+          return chunk;
+        }
+      }
+
+      ndef.set(chunk, off);
+      off += chunk.length;
+    }
+
+    return ndef;
   }
 
   async setNDEF(ndef: Uint8Array) : Promise<APDUResponse> {
@@ -395,7 +455,7 @@ export class Commandset {
     let altPinByteArr: Uint8Array | null = null;
 
     if (sharedSecret != undefined && typeof sharedSecret === "string") {
-      sharedSecret = this.pairingPasswordToSecret(sharedSecret);
+      sharedSecret = (this.secureChannel instanceof SecureChannelV2) ? undefined : this.pairingPasswordToSecret(sharedSecret);
     }
 
     let pinByteArr = CryptoUtils.stringToUint8Array(pin);
@@ -429,7 +489,7 @@ export class Commandset {
     }
 
     if (this.secureChannel instanceof SecureChannelV2) {
-      this.secureChannel.autoOpenSecureChannel(this.apduChannel);
+      await this.secureChannel.autoOpenSecureChannel(this.apduChannel);
       const initCmd = this.secureChannel.protectedCommand(0x80, INS_INIT, 0, 0, initData);
       return this.secureChannel.transmit(this.apduChannel, initCmd);
     } else {
