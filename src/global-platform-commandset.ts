@@ -97,7 +97,7 @@ export class GlobalPlatformCommandset {
       try {
         return SCP02Channel.verifyChallenge(hostChallenge, keys, apduResp);
       } catch (err: any) {
-        if (err.sw === undefined) {
+        if (err.sw !== Constants.SW_SECURITY_CONDITION_NOT_SATISFIED) {
           throw err;
         }
       }
