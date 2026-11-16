@@ -5,6 +5,8 @@ import pcsclite from "@nonth/pcsclite";
 import process from "process";
 import { SIGN_P2_BIP340_SCHNORR } from "../dist/commandset.js";
 import { CryptoUtils } from "../dist/crypto-utils.js";
+import { GlobalPlatformCommandset } from "../dist/global-platform-commandset.js";
+import { GlobalPlatformConstants } from "../dist/global-platform-constants.js";
 
 const pcsc = pcsclite();
 
@@ -158,6 +160,18 @@ function createChannel(): any {
               if(cmdSet.applicationInfo.appVersion < 0x0400) {
                 console.log("Unpair");
                 await cmdSet.autoUnpair();
+              }
+
+              console.log("Reading the card manager's status");
+              let gpCmdSet = new GlobalPlatformCommandset(channel);
+              try {
+                (await gpCmdSet.select()).checkOK();
+                await gpCmdSet.openSecureChannel(false);
+                let isdStatus = (await gpCmdSet.getStatus(GlobalPlatformConstants.GET_STATUS_P1_ISD)).checkOK().data;
+                console.log("Card manager status: " + hx(isdStatus));
+              } catch (err) {
+                // Only the development and GlobalPlatform default keys open the card manager here.
+                console.log("Card manager status not read: " + err);
               }
 
               process.exit(0);
