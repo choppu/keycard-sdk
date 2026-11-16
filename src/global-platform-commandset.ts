@@ -185,6 +185,17 @@ export class GlobalPlatformCommandset {
     return this.secureChannel.send(cmd);
   }  
 
+  // Over the secure channel: GET STATUS needs an authenticated session. An empty AID matches every entry.
+  async getStatus(p1: number, p2: number = GlobalPlatformConstants.GET_STATUS_P2_TLV, aid = new Uint8Array(0)): Promise<APDUResponse> {
+    let data = new Uint8Array(aid.byteLength + 2);
+    data[0] = 0x4f;
+    data[1] = aid.byteLength;
+    data.set(aid, 2);
+
+    let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_GET_STATUS, p1, p2, data, true);
+    return this.secureChannel.send(cmd);
+  }
+
   async deleteKeycardInstance() : Promise<APDUResponse> {
     return this.delete(Identifiers.KEYCARD_INSTANCE_ID);
   }
