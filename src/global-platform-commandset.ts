@@ -56,6 +56,13 @@ export class GlobalPlatformCommandset {
     return this.apduChannel.send(cmd);
   }
 
+  // Plain, so only outside a secure channel session, which a command without its C-MAC aborts.
+  // No needsLE: with no data, the length byte already reads as Le.
+  async getData(tag: number): Promise<APDUResponse> {
+    let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_GET_DATA, tag >> 8, tag & 0xff, new Uint8Array(0));
+    return this.apduChannel.send(cmd);
+  }
+
   async externalAuthenticate(hostChallenge: Uint8Array): Promise<APDUResponse> {
     let cardChallenge = this.scp02Session.cardChallenge;
     let data = new Uint8Array(cardChallenge.byteLength + hostChallenge.byteLength);
