@@ -210,4 +210,9 @@ export class GlobalPlatformCommandset {
   async deleteKeycardInstancesAndPackage() : Promise<void> {
     (await this.delete(Identifiers.PACKAGE_AID, 0x80)).checkSW([Constants.SW_OK, Constants.SW_REFERENCED_DATA_NOT_FOUND]);
   }
+
+  async setStatus(p1: number, p2: number, aid = new Uint8Array(0)): Promise<APDUResponse> {
+    let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_SET_STATUS, p1, p2, aid);
+    return this.secureChannel.send(cmd);
+  }
 }
