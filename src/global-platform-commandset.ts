@@ -1,6 +1,7 @@
 import { CardChannel } from "./card-channel.ts";
 import { SCP02Channel } from "./scp02-channel.ts";
 import { SCP02Keys } from "./scp02-keys.ts";
+import { APDUException } from "./apdu-exception.ts";
 import { APDUResponse } from "./apdu-response.ts";
 import { APDUCommand } from "./apdu-command.ts";
 import { GlobalPlatformConstants } from "./global-platform-constants.ts";
@@ -58,6 +59,13 @@ export class GlobalPlatformCommandset {
     return this.apduChannel.send(cmd);
   }
 
+  // Plain, so only outside a secure channel session, which a command without its C-MAC aborts.
+  // No needsLE: with no data, the length byte already reads as Le.
+  async getData(tag: number): Promise<APDUResponse> {
+    let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_GET_DATA, tag >> 8, tag & 0xff, new Uint8Array(0));
+    return this.apduChannel.send(cmd);
+  }
+
   async externalAuthenticate(hostChallenge: Uint8Array): Promise<APDUResponse> {
     let cardChallenge = this.scp02Session.cardChallenge;
     let data = new Uint8Array(cardChallenge.byteLength + hostChallenge.byteLength);
@@ -71,27 +79,45 @@ export class GlobalPlatformCommandset {
     return this.secureChannel.send(cmd);
   }
 
-  async initializeUpdate(hostChallenge: Uint8Array): Promise<APDUResponse> {
+  // Every key is checked against one card cryptogram, so a wrong key never reaches EXTERNAL AUTHENTICATE
+  async initializeUpdate(hostChallenge: Uint8Array, candidates: SCP02Keys[] = []): Promise<APDUResponse> {
     let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_INITIALIZE_UPDATE, 0, 0, hostChallenge, true);
     let apduResp = (await this.apduChannel.send(cmd)).checkOK();
 
-    try {
-      this.scp02Session = SCP02Channel.verifyChallenge(hostChallenge, this.scp02Keys, apduResp);
-    } catch (err: any) {
-      if (err.sw) {
-        this.scp02Session = SCP02Channel.verifyChallenge(hostChallenge, gpDefaultKeys, apduResp);
-        this.scp02Session.useFallbackKeys();
-      }
+    let session = this.matchingSession(hostChallenge, apduResp, [this.scp02Keys, ...candidates]);
+
+    if (!session) {
+      session = this.matchingSession(hostChallenge, apduResp, [gpDefaultKeys]);
+      session?.useFallbackKeys();
     }
 
+    if (!session) {
+      throw new APDUException("Error: Error verifying card cryptogram.", Constants.SW_SECURITY_CONDITION_NOT_SATISFIED);
+    }
+
+    this.scp02Session = session;
     this.secureChannel = new SCP02Channel(this.apduChannel, this.scp02Session.scp02Keys);
 
     return apduResp;
   }
 
-  async openSecureChannel(autoUpgradeKeys = true): Promise<void> {
+  private matchingSession(hostChallenge: Uint8Array, apduResp: APDUResponse, keySets: SCP02Keys[]): SCP02Session | undefined {
+    for (let keys of keySets) {
+      try {
+        return SCP02Channel.verifyChallenge(hostChallenge, keys, apduResp);
+      } catch (err: any) {
+        if (err.sw !== Constants.SW_SECURITY_CONDITION_NOT_SATISFIED) {
+          throw err;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  async openSecureChannel(autoUpgradeKeys = true, candidates: SCP02Keys[] = []): Promise<void> {
     let hostChallenge = CryptoUtils.getRandomBytes(8);
-    (await this.initializeUpdate(hostChallenge)).checkOK();
+    (await this.initializeUpdate(hostChallenge, candidates)).checkOK();
     (await this.externalAuthenticate(hostChallenge)).checkOK();
 
     if (this.scp02Session.fallbackKeys && autoUpgradeKeys) {
@@ -186,6 +212,17 @@ export class GlobalPlatformCommandset {
     let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_DELETE, 0, p2 || 0, data);
     return this.secureChannel.send(cmd);
   }  
+
+  // Over the secure channel: GET STATUS needs an authenticated session. An empty AID matches every entry.
+  async getStatus(p1: number, p2: number = GlobalPlatformConstants.GET_STATUS_P2_TLV, aid = new Uint8Array(0)): Promise<APDUResponse> {
+    let data = new Uint8Array(aid.byteLength + 2);
+    data[0] = 0x4f;
+    data[1] = aid.byteLength;
+    data.set(aid, 2);
+
+    let cmd = new APDUCommand(0x80, GlobalPlatformConstants.INS_GET_STATUS, p1, p2, data, true);
+    return this.secureChannel.send(cmd);
+  }
 
   async deleteKeycardInstance() : Promise<APDUResponse> {
     return this.delete(Identifiers.KEYCARD_INSTANCE_ID);

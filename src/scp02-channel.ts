@@ -68,6 +68,6 @@ export class SCP02Channel {
       throw new APDUException("Error: Error verifying card cryptogram.", Constants.SW_SECURITY_CONDITION_NOT_SATISFIED);
     }
 
-    return new SCP02Session(sessionKeys, cardChallenge);
+    return new SCP02Session(sessionKeys, cardChallenge, scp02Keys);
   }
 }
