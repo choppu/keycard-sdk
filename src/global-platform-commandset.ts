@@ -51,8 +51,10 @@ export class GlobalPlatformCommandset {
     return this.secureChannel.send(cmd);
   }
 
-  async select(): Promise<APDUResponse> {
-    let cmd = new APDUCommand(0x00, GlobalPlatformConstants.INS_SELECT, GlobalPlatformConstants.SELECT_P1_BY_NAME, 0, new Uint8Array(0));
+  // An empty AID reaches the ISD only while it is the default selected application.
+  // Le only with an AID: the empty form's length byte already reads as Le.
+  async select(aid = new Uint8Array(0)): Promise<APDUResponse> {
+    let cmd = new APDUCommand(0x00, GlobalPlatformConstants.INS_SELECT, GlobalPlatformConstants.SELECT_P1_BY_NAME, 0, aid, aid.byteLength > 0);
     return this.apduChannel.send(cmd);
   }
 

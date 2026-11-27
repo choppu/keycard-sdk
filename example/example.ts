@@ -5,6 +5,7 @@ import pcsclite from "@nonth/pcsclite";
 import process from "process";
 import { SIGN_P2_BIP340_SCHNORR } from "../dist/commandset.js";
 import { CryptoUtils } from "../dist/crypto-utils.js";
+import { GlobalPlatformCommandset } from "../dist/global-platform-commandset.js";
 
 const pcsc = pcsclite();
 
@@ -15,6 +16,8 @@ const caPubKey = new Uint8Array([
   0x64, 0x4b, 0xec, 0x79, 0x5b, 0x9d, 0xa0, 0x07,
   0x43
 ]);
+
+const isdAid = new Uint8Array([0xa0, 0x00, 0x00, 0x01, 0x51, 0x00, 0x00, 0x00]);
 
 const peerPub = new Uint8Array(Buffer.from("0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8", "hex"));
 const eip1581Path = new Keycard.KeyPath("m/43'/60'/1581'/0/0");
@@ -159,6 +162,11 @@ function createChannel(): any {
                 console.log("Unpair");
                 await cmdSet.autoUnpair();
               }
+
+              console.log("Selecting the card manager by AID");
+              let gpCmdSet = new GlobalPlatformCommandset(channel);
+              let isdFci = (await gpCmdSet.select(isdAid)).checkOK().data;
+              console.log("Card manager FCI: " + hx(isdFci));
 
               process.exit(0);
             }
